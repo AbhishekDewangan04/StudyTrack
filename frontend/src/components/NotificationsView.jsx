@@ -18,12 +18,12 @@ const NotificationsView = ({ tasks = [], onViewTask, onToggleStatus }) => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-slate-200 p-6 rounded-2xl space-y-1 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center space-x-2">
-          <Bell className="w-5 h-5 text-indigo-600" />
+      <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-card">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center space-x-2">
+          <Bell className="w-6 h-6 text-indigo-600 shrink-0" />
           <span>Notification Center</span>
-        </h2>
-        <p className="text-xs text-slate-500">
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
           Automated warnings for overdue deadlines, upcoming assignment due dates, and recent activity.
         </p>
       </div>

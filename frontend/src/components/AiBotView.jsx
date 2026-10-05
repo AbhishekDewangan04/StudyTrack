@@ -46,7 +46,7 @@ const markdownComponents = {
     </p>
   ),
   strong: ({ children }) => (
-    <strong className="font-extrabold text-slate-900 bg-indigo-50/80 px-1 py-0.5 rounded text-[13px] border border-indigo-100/60">
+    <strong className="font-extrabold text-slate-900 font-semibold">
       {children}
     </strong>
   ),
@@ -256,27 +256,42 @@ const AiBotView = ({ onOpenProModal, tasks = [] }) => {
     setSubjectInput('');
   };
 
+  // Helper to clean Markdown text by removing unwanted raw dividers like *** or ****
+  const cleanMarkdown = (text) => {
+    if (!text) return '';
+    return text
+      .replace(/\*\*\*+/g, '')
+      .replace(/---+/g, '---')
+      .replace(/\n\s*\n\s*\n+/g, '\n\n')
+      .trim();
+  };
+
   // Helper to parse Q&A Flashcards out of text response for card UI
   const parseFlashcards = (text) => {
+    if (!text) return [];
     const cards = [];
     const lines = text.split('\n');
     let currentQ = '';
     let currentA = '';
 
     for (let line of lines) {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('Q:') || trimmed.match(/^Q\d*:/i) || trimmed.startsWith('Question:')) {
+      let trimmed = line.trim().replace(/^\*+\s*/, '').replace(/\*+$/, '');
+      if (/^(Q\d*|Question\s*\d*):\s*/i.test(trimmed)) {
         if (currentQ && currentA) {
-          cards.push({ question: currentQ, answer: currentA });
+          cards.push({ question: currentQ.trim(), answer: currentA.trim() });
           currentA = '';
         }
-        currentQ = trimmed.replace(/^Q\d*:\s*/i, '').replace(/^Question:\s*/i, '');
-      } else if (trimmed.startsWith('A:') || trimmed.match(/^A\d*:/i) || trimmed.startsWith('Answer:')) {
-        currentA = trimmed.replace(/^A\d*:\s*/i, '').replace(/^Answer:\s*/i, '');
+        currentQ = trimmed.replace(/^(Q\d*|Question\s*\d*):\s*/i, '').replace(/\*+/g, '');
+      } else if (/^(A\d*|Answer\s*\d*):\s*/i.test(trimmed)) {
+        currentA = trimmed.replace(/^(A\d*|Answer\s*\d*):\s*/i, '').replace(/\*+/g, '');
+      } else if (currentA && trimmed && !/^(Card\s*\d*|\*\*\*|---)/i.test(trimmed)) {
+        currentA += ' ' + trimmed.replace(/\*+/g, '');
+      } else if (currentQ && !currentA && trimmed && !/^(Card\s*\d*|\*\*\*|---)/i.test(trimmed)) {
+        currentQ += ' ' + trimmed.replace(/\*+/g, '');
       }
     }
     if (currentQ && currentA) {
-      cards.push({ question: currentQ, answer: currentA });
+      cards.push({ question: currentQ.trim(), answer: currentA.trim() });
     }
     return cards;
   };
@@ -396,7 +411,7 @@ const AiBotView = ({ onOpenProModal, tasks = [] }) => {
                   {isBot ? (
                     <div className="prose prose-slate max-w-none text-slate-800">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                        {msg.text}
+                        {cleanMarkdown(msg.text)}
                       </ReactMarkdown>
                     </div>
                   ) : (

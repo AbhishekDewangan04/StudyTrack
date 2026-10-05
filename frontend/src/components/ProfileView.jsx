@@ -49,10 +49,10 @@ const ProfileView = ({ stats }) => {
     <div className="space-y-6">
       {/* Page Header */}
       <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-card">
-        <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
           Profile & Settings
         </h1>
-        <p className="text-xs text-slate-500 font-medium mt-0.5">
+        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
           Manage your account and preferences.
         </p>
 

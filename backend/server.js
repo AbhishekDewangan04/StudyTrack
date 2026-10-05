@@ -53,8 +53,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Authentication Routes
+// Authentication & User Profile Routes
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/user', require('./routes/authRoutes'));
 
 // Task Management Routes
 app.use('/api/tasks', require('./routes/taskRoutes'));

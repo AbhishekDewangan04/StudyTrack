@@ -234,6 +234,7 @@ const createTask = async (req, res) => {
       subject: String(subject).trim(),
       deadline,
       status: status || 'Pending',
+      completedAt: (status || 'Pending') === 'Completed' ? new Date() : null,
       locationName: trimmedName,
       locationAddress: trimmedAddress,
       locationLatitude: parsedLat,
@@ -323,6 +324,18 @@ const updateTask = async (req, res) => {
       }
     }
 
+    // Reset reminder state if explicit deadline change is provided
+    if (updateFields.deadline) {
+      const newDead = new Date(updateFields.deadline);
+      const oldDead = new Date(task.deadline);
+      if (!isNaN(newDead.getTime()) && newDead.getTime() !== oldDead.getTime()) {
+        updateFields.deadlineReminderSent = false;
+        updateFields.deadlineReminderSentAt = null;
+        updateFields.overdueNoticeSent = false;
+        updateFields.overdueNoticeSentAt = null;
+      }
+    }
+
     // Handle Recurring Task progression on completion
     if (updateFields.status === 'Completed' && task.status !== 'Completed') {
       if (finalIsRecurring && finalRecType && finalRecType !== 'none') {
@@ -333,13 +346,25 @@ const updateTask = async (req, res) => {
         if (!endDateObj || nextDeadline <= new Date(endDateObj)) {
           updateFields.deadline = nextDeadline;
           updateFields.status = 'Pending'; // Advance to next scheduled occurrence as Pending
+          updateFields.completedAt = null;
+          updateFields.deadlineReminderSent = false;
+          updateFields.deadlineReminderSentAt = null;
+          updateFields.overdueNoticeSent = false;
+          updateFields.overdueNoticeSentAt = null;
         } else {
           // Recurrence period finished
           updateFields.isRecurring = false;
           updateFields.recurrenceType = 'none';
           updateFields.status = 'Completed';
+          updateFields.completedAt = new Date();
         }
+      } else {
+        updateFields.completedAt = new Date();
       }
+    } else if (updateFields.status === 'Pending') {
+      updateFields.completedAt = null;
+    } else if (updateFields.status === 'Completed') {
+      updateFields.completedAt = task.completedAt || new Date();
     }
 
     // Validate location latitude if present in body

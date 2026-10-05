@@ -27,6 +27,23 @@ const runSchedulerJobs = async () => {
 
     for (const task of upcomingTasks) {
       if (task.user && task.user.email) {
+        const deadlineMs = new Date(task.deadline).getTime();
+        const createdMs = task.createdAt ? new Date(task.createdAt).getTime() : 0;
+
+        // If task was created less than 24 hours before its deadline, do not spam user. Safely mark reminder processed.
+        if (createdMs > 0 && (deadlineMs - createdMs < 24 * 60 * 60 * 1000)) {
+          try {
+            await Task.findByIdAndUpdate(task._id, {
+              deadlineReminderSent: true,
+              deadlineReminderSentAt: new Date(),
+            });
+          } catch (dbErr) {
+            console.error(`⚠️ [Scheduler] Error marking short-notice task ${task._id}:`, dbErr.message);
+          }
+          continue;
+        }
+
+        // Send exactly ONE deadline reminder to task owner's real registered email
         const result = await sendDeadlineReminderEmail({
           to: task.user.email,
           name: task.user.name,
@@ -35,7 +52,7 @@ const runSchedulerJobs = async () => {
           deadline: task.deadline,
         });
 
-        // Only mark reminder as sent AFTER successful email dispatch/simulation
+        // Mark reminder as sent in stored state to prevent duplicates
         if (result && result.success) {
           try {
             await Task.findByIdAndUpdate(task._id, {

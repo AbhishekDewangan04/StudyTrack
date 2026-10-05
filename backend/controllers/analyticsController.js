@@ -219,16 +219,27 @@ const getAnalyticsTrends = async (req, res) => {
       const dateStr = d.toISOString().split('T')[0];
       const dayName = dayNames[d.getDay()];
 
-      const completedCount = tasks.filter(
-        (t) =>
-          t.status === 'Completed' &&
-          t.updatedAt &&
-          new Date(t.updatedAt).toISOString().split('T')[0] === dateStr
-      ).length;
+      const targetYear = d.getFullYear();
+      const targetMonth = d.getMonth();
+      const targetDay = d.getDate();
+
+      const createdCount = tasks.filter((t) => {
+        const cd = t.createdAt ? new Date(t.createdAt) : null;
+        if (!cd || isNaN(cd.getTime())) return false;
+        return cd.getFullYear() === targetYear && cd.getMonth() === targetMonth && cd.getDate() === targetDay;
+      }).length;
+
+      const completedCount = tasks.filter((t) => {
+        if (t.status !== 'Completed') return false;
+        const compDate = t.completedAt ? new Date(t.completedAt) : t.updatedAt ? new Date(t.updatedAt) : null;
+        if (!compDate || isNaN(compDate.getTime())) return false;
+        return compDate.getFullYear() === targetYear && compDate.getMonth() === targetMonth && compDate.getDate() === targetDay;
+      }).length;
 
       weeklyTrend.push({
         day: dayName,
         date: dateStr,
+        createdCount,
         completedCount,
       });
     }

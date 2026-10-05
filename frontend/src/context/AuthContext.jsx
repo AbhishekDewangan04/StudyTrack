@@ -12,20 +12,43 @@ export const AuthProvider = ({ children }) => {
   // Initialize auth state on mount
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('token');
+      // Check for Google OAuth redirect query params
+      const urlParams = new URLSearchParams(window.location.search);
+      const googleToken = urlParams.get('token');
+      const authErr = urlParams.get('auth_error');
+
+      if (authErr) {
+        setError(decodeURIComponent(authErr));
+        const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
+      let activeToken = googleToken || localStorage.getItem('token');
+
+      if (googleToken) {
+        localStorage.setItem('token', googleToken);
+        setToken(googleToken);
+        const cleanUrl = window.location.origin + window.location.pathname + window.location.hash;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
       const storedUser = localStorage.getItem('user');
 
-      if (storedToken && storedUser) {
+      if (activeToken) {
         try {
-          setUser(JSON.parse(storedUser));
-          setToken(storedToken);
+          if (storedUser && !googleToken) {
+            setUser(JSON.parse(storedUser));
+          }
+          setToken(activeToken);
 
-          // Verify token validity with backend
+          // Verify token validity & fetch up-to-date user from backend MongoDB
           const freshUser = await authAPI.getMe();
-          setUser(freshUser);
-          localStorage.setItem('user', JSON.stringify(freshUser));
+          if (freshUser) {
+            setUser(freshUser);
+            localStorage.setItem('user', JSON.stringify(freshUser));
+          }
         } catch (err) {
-          console.warn('Stored token is invalid or expired. Logging out.');
+          console.warn('Token is invalid or expired. Logging out.');
           logout();
         }
       }
@@ -40,12 +63,12 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const data = await authAPI.register({ name, email, password });
-      const userData = { _id: data._id, name: data.name, email: data.email };
+      const { token: userToken, ...userData } = data;
 
-      setToken(data.token);
+      setToken(userToken);
       setUser(userData);
 
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('token', userToken);
       localStorage.setItem('user', JSON.stringify(userData));
 
       return data;
@@ -60,13 +83,24 @@ export const AuthProvider = ({ children }) => {
     setError(null);
     try {
       const data = await authAPI.login({ email, password });
-      const userData = { _id: data._id, name: data.name, email: data.email };
+      const { token: userToken, ...userData } = data;
 
-      setToken(data.token);
+      setToken(userToken);
       setUser(userData);
 
-      localStorage.setItem('token', data.token);
+      localStorage.setItem('token', userToken);
       localStorage.setItem('user', JSON.stringify(userData));
+
+      // Sync fresh user data from backend MongoDB as single source of truth
+      try {
+        const freshUser = await authAPI.getMe();
+        if (freshUser) {
+          setUser(freshUser);
+          localStorage.setItem('user', JSON.stringify(freshUser));
+        }
+      } catch (meErr) {
+        console.warn('Failed to sync getMe during login:', meErr.message);
+      }
 
       return data;
     } catch (err) {

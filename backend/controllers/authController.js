@@ -45,6 +45,8 @@ const registerUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        isPro: !!user.isPro,
+        googleCalendarConnected: !!user.googleCalendarConnected,
         token: generateToken(user._id),
       });
     } else {
@@ -76,6 +78,8 @@ const loginUser = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        isPro: !!user.isPro,
+        googleCalendarConnected: !!user.googleCalendarConnected,
         token: generateToken(user._id),
       });
     } else {
@@ -202,10 +206,187 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// Helper to get Google Login redirect URI dynamically or from env
+const getLoginRedirectUri = (req) => {
+  if (process.env.GOOGLE_LOGIN_REDIRECT_URI) {
+    return process.env.GOOGLE_LOGIN_REDIRECT_URI;
+  }
+  if (process.env.GOOGLE_REDIRECT_URI && process.env.GOOGLE_REDIRECT_URI.includes('/api/auth/google/callback')) {
+    return process.env.GOOGLE_REDIRECT_URI;
+  }
+  const protocol = req ? (req.headers['x-forwarded-proto'] || req.protocol || 'http') : 'http';
+  const host = req ? (req.headers['x-forwarded-host'] || req.get('host') || 'localhost:5000') : 'localhost:5000';
+  return `${protocol}://${host}/api/auth/google/callback`;
+};
+
+// Helper to generate secure HMAC-signed state for Google Login
+const generateLoginState = () => {
+  const payload = JSON.stringify({
+    type: 'google_login',
+    timestamp: Date.now(),
+    nonce: crypto.randomBytes(16).toString('hex'),
+  });
+  const hmac = crypto
+    .createHmac('sha256', process.env.JWT_SECRET || 'studytrack_secret_key')
+    .update(payload)
+    .digest('hex');
+  return Buffer.from(JSON.stringify({ payload, hmac })).toString('base64');
+};
+
+// Helper to verify HMAC-signed state for Google Login
+const verifyLoginState = (stateStr) => {
+  if (!stateStr) return false;
+  try {
+    const { payload, hmac } = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf8'));
+    const expectedHmac = crypto
+      .createHmac('sha256', process.env.JWT_SECRET || 'studytrack_secret_key')
+      .update(payload)
+      .digest('hex');
+    if (hmac !== expectedHmac) return false;
+
+    const data = JSON.parse(payload);
+    if (data.type !== 'google_login') return false;
+    // Expire state after 15 minutes
+    if (Date.now() - data.timestamp > 15 * 60 * 1000) return false;
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+// @desc    Get Google OAuth Authorization URL for Login
+// @route   GET /api/auth/google
+// @access  Public
+const getGoogleAuthUrl = async (req, res) => {
+  try {
+    const { GOOGLE_CLIENT_ID } = process.env;
+    const redirectUri = getLoginRedirectUri(req);
+
+    if (!GOOGLE_CLIENT_ID) {
+      return res.status(400).json({
+        message: 'Google OAuth credentials (GOOGLE_CLIENT_ID) are not configured in backend .env',
+      });
+    }
+
+    const state = generateLoginState();
+
+    const params = new URLSearchParams({
+      client_id: GOOGLE_CLIENT_ID,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'openid email profile',
+      prompt: 'select_account',
+      state,
+    });
+
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    return res.status(200).json({ url });
+  } catch (error) {
+    console.error('GetGoogleAuthUrl Error:', error.message);
+    return res.status(500).json({ message: 'Failed to generate Google auth URL' });
+  }
+};
+
+// @desc    Google OAuth Callback for Login
+// @route   GET /api/auth/google/callback
+// @access  Public
+const googleOAuthCallback = async (req, res) => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  try {
+    const { code, state, error } = req.query;
+
+    if (error || !code) {
+      return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent(error || 'Google login cancelled')}`);
+    }
+
+    // Secure CSRF state verification
+    if (!verifyLoginState(state)) {
+      console.error('Invalid or expired Google login state parameter');
+      return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent('Invalid or expired state parameter. Please try logging in again.')}`);
+    }
+
+    const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
+    const redirectUri = getLoginRedirectUri(req);
+
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent('Google OAuth credentials not configured on server')}`);
+    }
+
+    // Exchange authorization code for tokens
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }).toString(),
+    });
+
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok || !tokenData.access_token) {
+      console.error('Google OAuth Token Exchange Error:', tokenData);
+      return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent('Failed to exchange Google OAuth code')}`);
+    }
+
+    // Fetch user profile info from Google API
+    const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const googleProfile = await profileRes.json();
+
+    if (!profileRes.ok || !googleProfile.email) {
+      return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent('Failed to fetch Google user profile')}`);
+    }
+
+    const userEmail = googleProfile.email.toLowerCase().trim();
+
+    // Find existing user by verified Google email
+    let user = await User.findOne({ email: userEmail });
+
+    if (user) {
+      // Preserve existing user, MongoDB ID, tasks, analytics and isPro status
+      if (!user.googleId) {
+        user.googleId = googleProfile.id;
+        await user.save({ validateBeforeSave: false });
+      }
+    } else {
+      // Create new user for first-time Google sign-in
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      user = await User.create({
+        name: googleProfile.name || userEmail.split('@')[0],
+        email: userEmail,
+        password: randomPassword,
+        googleId: googleProfile.id,
+        isPro: false,
+      });
+
+      // Trigger Welcome Email for new user registration via Google (exactly once)
+      sendWelcomeEmail({ to: user.email, name: user.name }).catch((err) => {
+        console.error('❌ Async Welcome Email Error:', err.message);
+      });
+    }
+
+    // Generate existing StudyTrack JWT
+    const token = generateToken(user._id);
+
+    return res.redirect(`${clientUrl}/?token=${token}`);
+  } catch (error) {
+    console.error('Google OAuth Callback Server Error:', error.message);
+    return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent('Server error during Google authentication')}`);
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getMe,
   forgotPassword,
   resetPassword,
+  getGoogleAuthUrl,
+  googleOAuthCallback,
 };
+

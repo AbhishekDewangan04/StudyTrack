@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Crown, Check, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Crown, Check, X, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { paymentAPI } from '../services/api';
 import { loadRazorpaySDK } from '../utils/loadRazorpay';
 import { useAuth } from '../context/AuthContext';
@@ -9,6 +9,24 @@ const ProModal = ({ isOpen, onClose }) => {
   const [billingCycle, setBillingCycle] = useState('yearly'); // 'monthly' or 'yearly'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [keyId, setKeyId] = useState(null);
+  const [showTestDetails, setShowTestDetails] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      paymentAPI
+        .getConfig()
+        .then((cfg) => {
+          if (cfg?.keyId) {
+            setKeyId(cfg.keyId);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
+
+  const isTestMode = !keyId || keyId.startsWith('rzp_test_');
 
   if (!isOpen) return null;
 
@@ -144,6 +162,99 @@ const ProModal = ({ isOpen, onClose }) => {
             </p>
           </div>
         </div>
+
+        {/* Razorpay Test Mode UX Indicator */}
+        {isTestMode && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3.5 space-y-3">
+            <div className="flex items-center justify-between text-xs text-amber-300 font-semibold">
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+                <span>Test Mode — No real money will be charged.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTestDetails((prev) => !prev)}
+                className="text-amber-400 hover:text-amber-200 text-xs font-bold flex items-center space-x-1 cursor-pointer transition"
+              >
+                <span>Test Card Details</span>
+                {showTestDetails ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            {showTestDetails && (
+              <div className="pt-2.5 border-t border-amber-500/20 space-y-2 text-xs text-slate-300">
+                <p className="text-[11px] text-amber-200/80 font-medium">
+                  Use the following official Razorpay test credentials during checkout:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Card Number</span>
+                      <span className="font-mono text-white font-bold select-all">4718 6091 0820 4366</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('4718609108204366');
+                        setCopiedField('card');
+                        setTimeout(() => setCopiedField(null), 2000);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                      title="Copy Card Number"
+                    >
+                      {copiedField === 'card' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">CVV</span>
+                      <span className="font-mono text-white font-bold select-all">123</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('123');
+                        setCopiedField('cvv');
+                        setTimeout(() => setCopiedField(null), 2000);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                      title="Copy CVV"
+                    >
+                      {copiedField === 'cvv' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Expiry</span>
+                      <span className="font-mono text-white font-bold">Any future date</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-950/70 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">OTP</span>
+                      <span className="font-mono text-white font-bold select-all">12345678</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText('12345678');
+                        setCopiedField('otp');
+                        setTimeout(() => setCopiedField(null), 2000);
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-amber-300 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                      title="Copy OTP"
+                    >
+                      {copiedField === 'otp' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Monthly / Yearly Billing Toggle */}
         <div className="flex justify-center pt-1">

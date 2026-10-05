@@ -15,12 +15,13 @@ const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
  * Generate Google OAuth Authorization URL with state CSRF protection
  */
 const getGoogleAuthUrl = (userId) => {
-  const { GOOGLE_CLIENT_ID, GOOGLE_REDIRECT_URI } = process.env;
+  const { GOOGLE_CLIENT_ID } = process.env;
+  const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI;
 
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_REDIRECT_URI) {
+  if (!GOOGLE_CLIENT_ID || !redirectUri) {
     return {
       configured: false,
-      message: 'Google OAuth credentials (GOOGLE_CLIENT_ID / GOOGLE_REDIRECT_URI) not configured in backend .env file.',
+      message: 'Google OAuth credentials (GOOGLE_CLIENT_ID / GOOGLE_CALENDAR_REDIRECT_URI) not configured in backend .env file.',
     };
   }
 
@@ -28,7 +29,7 @@ const getGoogleAuthUrl = (userId) => {
   const state = Buffer.from(JSON.stringify({ userId, timestamp: Date.now() })).toString('base64');
 
   const options = {
-    redirect_uri: GOOGLE_REDIRECT_URI,
+    redirect_uri: redirectUri,
     client_id: GOOGLE_CLIENT_ID,
     access_type: 'offline',
     response_type: 'code',
@@ -51,9 +52,10 @@ const getGoogleAuthUrl = (userId) => {
  * Exchange Authorization Code for Access & Refresh Tokens
  */
 const exchangeCodeForTokens = async (code) => {
-  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } = process.env;
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
+  const redirectUri = process.env.GOOGLE_CALENDAR_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI;
 
-  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REDIRECT_URI) {
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !redirectUri) {
     throw new Error('Google OAuth credentials not fully configured on server.');
   }
 
@@ -61,7 +63,7 @@ const exchangeCodeForTokens = async (code) => {
     code,
     client_id: GOOGLE_CLIENT_ID,
     client_secret: GOOGLE_CLIENT_SECRET,
-    redirect_uri: GOOGLE_REDIRECT_URI,
+    redirect_uri: redirectUri,
     grant_type: 'authorization_code',
   }).toString();
 

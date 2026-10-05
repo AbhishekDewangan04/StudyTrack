@@ -1,14 +1,29 @@
 const { isTestEnvironment } = require('../utils/testContext');
 
 /**
+ * Helper to identify automated test or placeholder email recipients
+ */
+const isTestRecipient = (to) => {
+  if (!to || typeof to !== 'string') return true;
+  const lower = to.toLowerCase().trim();
+  return (
+    lower.endsWith('@example.com') ||
+    lower.includes('test_req_') ||
+    lower.includes('test_user') ||
+    lower.includes('testuser') ||
+    lower.includes('placeholder')
+  );
+};
+
+/**
  * Provider-Agnostic Email Service Abstraction
  * Configured via environment variables: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, EMAIL_FROM
  * Safely operates in log-only simulated mode if SMTP credentials are missing or during automated tests.
  */
 
 const sendEmail = async ({ to, subject, text, html, isTest }) => {
-  // Check if running in test environment or test mode is enabled
-  if (isTestEnvironment({ isTest })) {
+  // Check if running in test environment or if recipient is a test/placeholder address
+  if (isTestEnvironment({ isTest }) || isTestRecipient(to)) {
     console.log(`📧 [Test Email Suppressed] Email to <${to}> suppressed in test environment (Subject: "${subject}")`);
     return {
       success: true,

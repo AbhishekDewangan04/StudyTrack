@@ -19,7 +19,7 @@ import FocusView from '../components/FocusView';
 import ProModal from '../components/ProModal';
 import AiBotView from '../components/AiBotView';
 
-import WeeklyProgressChart from '../components/dashboard/WeeklyProgressChart';
+import WeeklyActivity from '../components/dashboard/WeeklyProgressChart';
 import RecentActivity from '../components/dashboard/RecentActivity';
 import UpcomingTasks from '../components/dashboard/UpcomingTasks';
 import StudyLocationsCard from '../components/dashboard/StudyLocationsCard';
@@ -399,7 +399,7 @@ const Dashboard = () => {
               {/* Middle Row: Weekly Progress (Left ~65%) & Recent Activity (Right ~35%) */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
-                  <WeeklyProgressChart tasks={tasks} />
+                  <WeeklyActivity tasks={tasks} />
                 </div>
                 <div>
                   <RecentActivity
@@ -431,10 +431,10 @@ const Dashboard = () => {
               {/* My Tasks Page Header */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                     My Tasks
                   </h1>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
                     Manage all your assignments and stay on track.
                   </p>
                 </div>

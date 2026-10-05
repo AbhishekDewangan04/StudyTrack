@@ -31,6 +31,10 @@ const taskSchema = new mongoose.Schema(
       enum: ['Pending', 'Completed'],
       default: 'Pending',
     },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
     deadlineReminderSent: {
       type: Boolean,
       default: false,

@@ -41,32 +41,38 @@ Your primary goal is to provide naturally structured, highly educational, ChatGP
 
 GUIDELINES FOR YOUR RESPONSES:
 1. STRUCTURE & FLOW:
-   - For educational topics, start directly with a clear definition/overview.
-   - Use natural section headings (e.g. ## Definition, ## Key Concepts, ## Why It Matters, ## Examples, ## Comparison, ## Summary).
-   - Use bullet points for features, advantages, or examples, and numbered lists for steps, algorithms, or ordered concepts.
-   - Bold important technical terms, concepts, and key definitions.
-   - Provide concrete examples, code snippets, or ASCII/text diagrams when they genuinely aid understanding.
-   - Adapt response length: keep simple questions concise, and provide structured depth for complex topics or study plans.
+   - Begin directly with the answer or explanation. Avoid conversational filler like "Sure!" or "Here is...".
+   - Use clear section headings (e.g. ## Overview, ## Key Concepts, ## Step-by-Step Plan, ## Summary).
+   - Use bullet points (-) for items and numbered lists (1.) for steps.
+   - Bold important technical terms (**term**) cleanly without over-bolding.
+   - Use Markdown tables for comparisons.
+   - Use fenced code blocks with language specifiers (e.g. \`\`\`cpp) for code snippets.
 
-2. MARKDOWN FORMATTING:
-   - Output clean, standard GitHub-Flavored Markdown.
-   - Use headings (## Subtopic, ### Component) for visual hierarchy.
-   - For code, use fenced code blocks with language specifiers (e.g. \`\`\`sql, \`\`\`cpp).
-   - Use Markdown tables (e.g. | Feature | Option A | Option B |) when comparing concepts.
-   - Avoid generic conversational filler like "Sure! Here is..." or "As an AI...". Begin directly with the clear, educational content.
-   - When generating flashcards, format clearly as:
+2. STRICT FORMATTING RESTRICTIONS:
+   - NEVER output raw '***', '****', or lines filled with asterisks.
+   - NEVER output raw JSON or unformatted markers.
+
+3. FLASHCARDS FORMATTING:
+   - When asked to generate flashcards, format each card strictly as:
 Card 1
 Q: [Question]
-A: [Answer]`;
+A: [Answer]
+
+Card 2
+Q: [Question]
+A: [Answer]
+
+Do not put asterisks around Q: or A:. Do not place dividers between cards.`;
 
     let userPrompt = '';
 
     if (action === 'create_flashcards') {
       userPrompt = `Generate 6-8 concise, high-yield study flashcards for the topic: "${topic || query || 'Core Concepts'}". 
-Format each flashcard clearly as:
+Format each flashcard strictly as:
 Card 1
 Q: [Question]
 A: [Answer]
+
 Card 2
 Q: [Question]
 A: [Answer]`;
@@ -74,21 +80,21 @@ A: [Answer]`;
       userPrompt = `Create a realistic, step-by-step study plan for ${subject || topic || query}.
 Available Study Time: ${availableHours || '3 hours/day'}
 Target Date/Exam: ${examDate || 'Next 7 days'}
-Structure it day-by-day with specific topics to cover, practice tasks, and revision checkpoints.`;
+Structure it day-by-day with specific topics to cover, practice tasks, and revision checkpoints using clean headings and bullet points.`;
     } else if (action === 'help_me_revise') {
-      userPrompt = `Give me an effective revision strategy and high-priority concept checklist for: "${topic || query}". Include active recall questions and key revision points.`;
+      userPrompt = `Give me an effective revision strategy and high-priority concept checklist for: "${topic || query}". Include active recall questions and key revision points with clean Markdown headings and lists.`;
     } else if (action === 'prepare_for_exam') {
       userPrompt = `Create an exam preparation strategy for ${subject || topic || query}. 
 Target Exam Date: ${examDate || '1 week from now'}
 Available Time: ${availableHours || '3 hours/day'}
-Detail the preparation stages: High-yield concepts, practice questions, and exam-day strategies.`;
+Detail the preparation stages: High-yield concepts, practice questions, and exam-day strategies using clean structured Markdown.`;
     } else if (action === 'explain_topic') {
-      userPrompt = `Explain the topic "${topic || query}" in a simple, clear, student-friendly way. Include:
-1. Definition
-2. Intuitive Analogy / Concept
-3. Practical Example
-4. Common Mistakes to Avoid
-5. Quick Summary`;
+      userPrompt = `Explain the topic "${topic || query}" in a clear, student-friendly way. Include:
+## Definition
+## Key Concept / Analogy
+## Practical Example
+## Common Mistakes to Avoid
+## Summary`;
     } else {
       userPrompt = query;
     }

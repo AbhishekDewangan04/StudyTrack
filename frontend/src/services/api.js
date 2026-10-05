@@ -53,6 +53,11 @@ export const authAPI = {
     request('/auth/me', {
       method: 'GET',
     }),
+
+  getGoogleAuthUrl: () =>
+    request('/auth/google', {
+      method: 'GET',
+    }),
 };
 
 // Task API endpoints
