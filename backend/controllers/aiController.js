@@ -103,8 +103,14 @@ Detail the preparation stages: High-yield concepts, practice questions, and exam
       userPrompt += `\n\nUser Context:\n${context}`;
     }
 
-    // 4. Send Request to Google Gemini REST API (with model fallback)
-    const modelsToTry = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-1.5-pro'];
+    // 4. Send Request to Google Gemini REST API (with updated supported model fallbacks)
+    const modelsToTry = [
+      'gemini-3.8-flash',
+      'gemini-flash-lite-latest',
+      'gemini-3.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-2.5-flash',
+    ];
     let replyText = null;
     let lastErrorMsg = null;
 
