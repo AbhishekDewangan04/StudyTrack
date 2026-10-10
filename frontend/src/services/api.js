@@ -22,7 +22,14 @@ const request = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-    const data = await response.json();
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      data = { message: text || `HTTP Error ${response.status}` };
+    }
 
     if (!response.ok) {
       throw new Error(data.message || 'An error occurred during API request');

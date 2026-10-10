@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
 
 const connectDB = async () => {
   try {
@@ -12,7 +13,17 @@ const connectDB = async () => {
       return;
     }
 
-    const conn = await mongoose.connect(connStr);
+    // Configure public DNS resolvers (Google 8.8.8.8 & Cloudflare 1.1.1.1) to prevent SRV ETIMEOUT on Windows
+    try {
+      dns.setServers(['8.8.8.8', '1.1.1.1']);
+    } catch (dnsErr) {
+      console.warn('⚠️ Could not override default DNS servers:', dnsErr.message);
+    }
+
+    const conn = await mongoose.connect(connStr, {
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+    });
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`❌ MongoDB Connection Error: ${error.message}`);

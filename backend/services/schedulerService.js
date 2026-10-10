@@ -4,6 +4,7 @@
  * Operates independently of frontend browser state.
  */
 
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const User = require('../models/User');
 const {
@@ -15,6 +16,9 @@ const {
 // Run background job scan
 const runSchedulerJobs = async () => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      return;
+    }
     const now = new Date();
 
     // 1. Task Deadline Reminders (Tasks due within next 24 hours)

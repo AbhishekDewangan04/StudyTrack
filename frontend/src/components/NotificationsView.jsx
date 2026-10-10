@@ -17,58 +17,67 @@ const NotificationsView = ({ tasks = [], onViewTask, onToggleStatus }) => {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-card">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center space-x-2">
-          <Bell className="w-6 h-6 text-indigo-600 shrink-0" />
-          <span>Notification Center</span>
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-          Automated warnings for overdue deadlines, upcoming assignment due dates, and recent activity.
-        </p>
+    <div className="space-y-6 font-sans">
+      {/* Page Header Card */}
+      <div className="bg-[#151827] border border-[#2B2F45] p-6 rounded-2xl shadow-xl backdrop-blur-md relative overflow-hidden">
+        <div className="flex items-center space-x-3.5 relative z-10">
+          <div className="w-11 h-11 rounded-xl bg-[#272044] border border-[#9B6BFF]/30 flex items-center justify-center text-[#9B6BFF] shadow-inner shrink-0">
+            <Bell className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-[#F1EEFF] tracking-tight font-display">
+              Notification Center
+            </h1>
+            <p className="text-xs text-[#A5AAC2] font-medium mt-0.5">
+              Automated warnings for overdue deadlines, upcoming assignment due dates, and study alerts.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Overdue Alerts Section */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold uppercase text-rose-700 tracking-wider flex items-center space-x-1.5">
-          <AlertTriangle className="w-4 h-4 text-rose-600" />
+        <h2 className="text-xs font-bold uppercase text-rose-400 tracking-wider flex items-center space-x-1.5">
+          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
           <span>High Priority: Overdue Assignments ({overdueTasks.length})</span>
-        </h3>
+        </h2>
 
         {overdueTasks.length === 0 ? (
-          <div className="bg-white border border-slate-200 p-4 rounded-xl text-xs text-slate-600 flex items-center gap-2 shadow-xs">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div className="bg-[#151827] border border-[#2B2F45] p-4 rounded-2xl text-xs text-[#A5AAC2] flex items-center gap-2.5 shadow-inner">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>No overdue tasks! All your past deadlines have been cleared.</span>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {overdueTasks.map((task) => (
               <div
                 key={task._id}
-                className="bg-rose-50/60 border border-rose-200 p-4 rounded-xl flex items-center justify-between gap-4 shadow-xs"
+                className="bg-[#1B1E30] hover:bg-[#1B1E30]/90 border border-rose-500/30 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-md transition group"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-slate-900 text-sm">{task.title}</span>
-                    <span className="text-[10px] font-bold uppercase bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                    <span className="font-bold text-[#F1EEFF] text-sm truncate">{task.title}</span>
+                    <span className="text-[10px] font-bold uppercase bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-lg shrink-0">
                       {task.subject}
                     </span>
                   </div>
-                  <p className="text-xs text-rose-700 flex items-center gap-1 font-medium">
-                    <Calendar className="w-3.5 h-3.5" /> Was due on {new Date(task.deadline).toLocaleString()}
+                  <p className="text-xs text-rose-400 flex items-center gap-1.5 font-medium">
+                    <Calendar className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                    <span>Was due on {new Date(task.deadline).toLocaleString()}</span>
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 shrink-0">
                   <Button
                     onClick={() => onToggleStatus(task)}
-                    variant="primary"
-                    size="sm"
+                    className="gradient-btn-purple py-1.5 px-3 rounded-xl font-bold text-xs shadow-md cursor-pointer"
                   >
                     Mark Done
                   </Button>
                   <button
                     onClick={() => onViewTask(task)}
-                    className="p-2 text-slate-500 hover:text-slate-900 bg-white rounded-xl border border-slate-200 shadow-xs cursor-pointer"
+                    title="View task details"
+                    aria-label="View task details"
+                    className="p-2 text-[#A5AAC2] hover:text-[#F1EEFF] bg-[#272044] hover:bg-[#272044]/80 rounded-xl border border-[#2B2F45] hover:border-[#9B6BFF]/40 transition cursor-pointer"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
@@ -81,44 +90,46 @@ const NotificationsView = ({ tasks = [], onViewTask, onToggleStatus }) => {
 
       {/* Due Soon Section */}
       <div className="space-y-3">
-        <h3 className="text-xs font-bold uppercase text-amber-700 tracking-wider flex items-center space-x-1.5">
-          <Clock className="w-4 h-4 text-amber-600" />
+        <h2 className="text-xs font-bold uppercase text-amber-400 tracking-wider flex items-center space-x-1.5">
+          <Clock className="w-4 h-4 text-amber-400 shrink-0" />
           <span>Due Within 3 Days ({dueSoonTasks.length})</span>
-        </h3>
+        </h2>
 
         {dueSoonTasks.length === 0 ? (
-          <div className="bg-white border border-slate-200 p-4 rounded-xl text-xs text-slate-500 shadow-xs">
+          <div className="bg-[#151827] border border-[#2B2F45] p-4 rounded-2xl text-xs text-[#A5AAC2] shadow-inner">
             No assignments due within the next 3 days.
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
             {dueSoonTasks.map((task) => (
               <div
                 key={task._id}
-                className="bg-amber-50/60 border border-amber-200 p-4 rounded-xl flex items-center justify-between gap-4 shadow-xs"
+                className="bg-[#1B1E30] hover:bg-[#1B1E30]/90 border border-amber-500/30 p-4 rounded-2xl flex items-center justify-between gap-4 shadow-md transition group"
               >
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-slate-900 text-sm">{task.title}</span>
-                    <span className="text-[10px] font-bold uppercase bg-amber-100 text-amber-800 border border-amber-200 px-2 py-0.5 rounded">
+                <div className="space-y-1.5 min-w-0">
+                  <div className="flex items-center space-x-2 flex-wrap gap-y-1">
+                    <span className="font-bold text-[#F1EEFF] text-sm truncate">{task.title}</span>
+                    <span className="text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-lg shrink-0">
                       {task.subject}
                     </span>
                   </div>
-                  <p className="text-xs text-amber-800 flex items-center gap-1 font-medium">
-                    <Calendar className="w-3.5 h-3.5" /> Due: {new Date(task.deadline).toLocaleString()}
+                  <p className="text-xs text-amber-300 flex items-center gap-1.5 font-medium">
+                    <Calendar className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                    <span>Due: {new Date(task.deadline).toLocaleString()}</span>
                   </p>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 shrink-0">
                   <Button
                     onClick={() => onToggleStatus(task)}
-                    variant="primary"
-                    size="sm"
+                    className="gradient-btn-purple py-1.5 px-3 rounded-xl font-bold text-xs shadow-md cursor-pointer"
                   >
                     Mark Done
                   </Button>
                   <button
                     onClick={() => onViewTask(task)}
-                    className="p-2 text-slate-500 hover:text-slate-900 bg-white rounded-xl border border-slate-200 shadow-xs cursor-pointer"
+                    title="View task details"
+                    aria-label="View task details"
+                    className="p-2 text-[#A5AAC2] hover:text-[#F1EEFF] bg-[#272044] hover:bg-[#272044]/80 rounded-xl border border-[#2B2F45] hover:border-[#9B6BFF]/40 transition cursor-pointer"
                   >
                     <Eye className="w-4 h-4" />
                   </button>

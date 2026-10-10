@@ -19,20 +19,21 @@ import FocusView from '../components/FocusView';
 import ProModal from '../components/ProModal';
 import AiBotView from '../components/AiBotView';
 
+import DashboardHero from '../components/dashboard/DashboardHero';
+import SubjectDistribution from '../components/dashboard/SubjectDistribution';
 import WeeklyActivity from '../components/dashboard/WeeklyProgressChart';
-import RecentActivity from '../components/dashboard/RecentActivity';
 import UpcomingTasks from '../components/dashboard/UpcomingTasks';
-import StudyLocationsCard from '../components/dashboard/StudyLocationsCard';
+import QuickActions from '../components/dashboard/QuickActions';
 import EmptyState from '../components/ui/EmptyState';
 import { SkeletonCard } from '../components/ui/Skeleton';
 
-import { BookOpen, AlertCircle, Plus, LayoutGrid, List } from 'lucide-react';
+import { BookOpen, AlertCircle, Plus, LayoutGrid, List, CheckCircle2, Clock } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
 
   // Navigation & Layout State
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview', 'tasks', 'calendar', 'analytics', 'locations', 'focus', 'notifications', 'profile', 'settings'
+  const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('studytrack_sidebar_collapsed') === 'true';
@@ -47,7 +48,7 @@ const Dashboard = () => {
   };
 
   const [isProModalOpen, setIsProModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('table'); // 'table' default matching reference image
+  const [viewMode, setViewMode] = useState('table');
   const [sortBy, setSortBy] = useState('deadline');
 
   // Task Data & API State
@@ -68,7 +69,7 @@ const Dashboard = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState('create'); // 'create', 'edit', 'view'
+  const [modalMode, setModalMode] = useState('create');
   const [selectedTask, setSelectedTask] = useState(null);
 
   const { socket } = useSocket();
@@ -118,7 +119,7 @@ const Dashboard = () => {
     fetchData();
   }, [fetchData]);
 
-  // Real-Time Socket.IO Event Listener Setup
+  // Real-Time Socket.IO Event Listeners
   useEffect(() => {
     if (!socket) return;
 
@@ -178,9 +179,7 @@ const Dashboard = () => {
         (task) =>
           task.title?.toLowerCase().includes(query) ||
           task.subject?.toLowerCase().includes(query) ||
-          task.description?.toLowerCase().includes(query) ||
-          task.locationName?.toLowerCase().includes(query) ||
-          task.locationAddress?.toLowerCase().includes(query)
+          task.description?.toLowerCase().includes(query)
       );
     }
 
@@ -193,18 +192,6 @@ const Dashboard = () => {
       list = list.filter((t) => t.status === 'Pending' && new Date(t.deadline) < now);
     }
 
-    if (filterLocation === 'withLocation') {
-      list = list.filter((t) => t.locationName || t.locationAddress || t.locationLatitude !== null);
-    } else if (filterLocation === 'withoutLocation') {
-      list = list.filter((t) => !t.locationName && !t.locationAddress && t.locationLatitude === null);
-    }
-
-    if (filterRecurrence === 'recurring') {
-      list = list.filter((t) => t.isRecurring);
-    } else if (filterRecurrence === 'oneTime') {
-      list = list.filter((t) => !t.isRecurring);
-    }
-
     if (sortBy === 'created') {
       list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
     } else {
@@ -212,7 +199,7 @@ const Dashboard = () => {
     }
 
     return list;
-  }, [tasks, searchQuery, filterStatus, filterLocation, filterRecurrence, sortBy]);
+  }, [tasks, searchQuery, filterStatus, sortBy]);
 
   const overdueTasks = useMemo(() => {
     const now = new Date();
@@ -221,6 +208,14 @@ const Dashboard = () => {
 
   const pendingTasks = useMemo(() => {
     return tasks.filter((t) => t.status === 'Pending');
+  }, [tasks]);
+
+  const todaysFocusTasks = useMemo(() => {
+    const now = new Date();
+    return tasks
+      .filter((t) => t.status === 'Pending')
+      .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+      .slice(0, 3);
   }, [tasks]);
 
   const unreadNotifCount = useMemo(() => {
@@ -303,16 +298,8 @@ const Dashboard = () => {
     setSortBy('deadline');
   };
 
-  // Formatted date string matching reference image (e.g. "Friday, Oct 3, 2026")
-  const formattedHeaderDate = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-
   return (
-    <div className="min-h-screen bg-[#F7F8FC] text-[#111827] flex font-sans transition-colors">
+    <div className="min-h-screen bg-[#090B12] text-slate-100 flex font-sans transition-colors selection:bg-[#9B6BFF]/30">
       {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -329,7 +316,7 @@ const Dashboard = () => {
       {/* Main Content Area */}
       <div
         className={`flex-1 flex flex-col transition-all duration-300 ${
-          isSidebarCollapsed ? 'md:pl-[76px]' : 'md:pl-[270px]'
+          isSidebarCollapsed ? 'md:pl-[76px]' : 'md:pl-[260px]'
         } min-w-0`}
       >
         {/* Top Navigation Bar */}
@@ -337,115 +324,126 @@ const Dashboard = () => {
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleCollapse={toggleSidebarCollapse}
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-          onOpenCreateModal={openCreateModal}
-          onRefresh={fetchData}
-          loading={loading}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
           activeTab={activeTab}
-          overdueTasks={overdueTasks}
-          pendingTasks={pendingTasks}
-          liveNotifications={liveNotifications}
-          unreadNotifCount={unreadNotifCount}
-          onViewNotifications={() => setHasViewedNotifications(true)}
-          setActiveTab={handleSelectTab}
         />
 
         {/* Main Body Content */}
         <main className="flex-1 px-4 sm:px-8 py-6 space-y-6 max-w-[1400px] w-full mx-auto">
           {/* Error Alert Banner */}
           {error && (
-            <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-700 flex items-center justify-between gap-3 shadow-xs">
+            <div className="p-4 bg-rose-500/10 border border-rose-500/30 rounded-2xl text-xs text-rose-300 flex items-center justify-between gap-3 shadow-lg">
               <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
                 <span>{error}</span>
               </div>
               <button
                 onClick={fetchData}
-                className="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-800 rounded-lg text-xs font-semibold cursor-pointer"
+                className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 rounded-xl text-xs font-bold cursor-pointer"
               >
                 Retry
               </button>
             </div>
           )}
 
-          {/* TAB 1: OVERVIEW (DASHBOARD) - Reference Top-Left Card */}
+          {/* TAB 1: OVERVIEW (DASHBOARD) - Reference Section 4 */}
           {(activeTab === 'overview' || activeTab === 'dashboard') && (
             <div className="space-y-6">
-              {/* Dashboard Greeting Header Matching Reference */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    Good morning, {user?.name?.split(' ')[0] || 'Abhishek'} 👋
-                  </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                    Let's make today productive!
-                  </p>
-                </div>
+              {/* 3D Hero Section */}
+              <DashboardHero
+                onCreateTask={openCreateModal}
+                onViewTasks={() => setActiveTab('tasks')}
+              />
 
-                <div className="text-right space-y-0.5 hidden sm:block">
-                  <p className="text-xs font-bold text-slate-400">
-                    {formattedHeaderDate}
-                  </p>
-                  <p className="text-xs italic text-slate-600 font-medium">
-                    "Discipline today leads to freedom tomorrow."
-                  </p>
-                </div>
-              </div>
-
-              {/* 4 Stat Cards */}
+              {/* 4 Task Metric Cards */}
               <StatsCards stats={stats} loading={loading} />
 
-              {/* Middle Row: Weekly Progress (Left ~65%) & Recent Activity (Right ~35%) */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <WeeklyActivity tasks={tasks} />
-                </div>
-                <div>
-                  <RecentActivity
-                    liveNotifications={liveNotifications}
+              {/* Main Grid: Today's Focus & Upcoming Deadlines (Left) + Subject Donut & Weekly Progress (Right) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Left Column (6 cols): Today's Focus & Upcoming Deadlines */}
+                <div className="lg:col-span-6 space-y-6">
+                  {/* Today's Focus Card */}
+                  <div className="bg-[#191B2B] border border-[#191B2B] p-5 rounded-2xl shadow-xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-bold text-white tracking-tight font-display flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[#FFBF69]" />
+                        <span>Today's Focus</span>
+                      </h3>
+                      <span className="text-[11px] font-bold text-[#FFBF69] bg-[#FFBF69]/10 px-2 py-0.5 rounded-full border border-[#FFBF69]/20">
+                        {todaysFocusTasks.length} Active
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {todaysFocusTasks.length > 0 ? (
+                        todaysFocusTasks.map((t) => (
+                          <div
+                            key={t._id}
+                            onClick={() => openViewModal(t)}
+                            className="p-3 rounded-xl bg-[#111522] border border-[#111522] hover:border-[#9B6BFF]/30 transition flex items-center justify-between cursor-pointer"
+                          >
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <span className="w-2.5 h-2.5 rounded-full bg-[#9B6BFF] shrink-0" />
+                              <div className="truncate">
+                                <p className="text-xs font-bold text-white truncate">{t.title}</p>
+                                <p className="text-[10px] text-slate-400 font-medium truncate">{t.subject || 'General'}</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleToggleStatus(t); }}
+                              className="text-[10px] font-bold text-[#C4A7FF] bg-[#9B6BFF]/15 hover:bg-[#9B6BFF]/30 px-2.5 py-1 rounded-lg transition"
+                            >
+                              Complete
+                            </button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-xs text-slate-500 italic py-4 text-center">No urgent tasks for today! Great job.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Upcoming Deadlines */}
+                  <UpcomingTasks
                     tasks={tasks}
+                    onViewTask={openViewModal}
                     onSelectTab={setActiveTab}
                   />
                 </div>
+
+                {/* Right Column (6 cols): Subject Distribution & Weekly Progress */}
+                <div className="lg:col-span-6 space-y-6">
+                  <SubjectDistribution tasks={tasks} />
+                  <WeeklyActivity tasks={tasks} />
+                </div>
               </div>
 
-              {/* Bottom Row: Upcoming Deadlines (Left 50%) & Study Locations (Right 50%) */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <UpcomingTasks
-                  tasks={tasks}
-                  onViewTask={openViewModal}
-                  onSelectTab={setActiveTab}
-                />
-                <StudyLocationsCard
-                  tasks={tasks}
-                  onSelectTab={setActiveTab}
-                />
-              </div>
+              {/* Quick Actions Strip */}
+              <QuickActions
+                onCreateTask={openCreateModal}
+                onSelectTab={setActiveTab}
+              />
             </div>
           )}
 
-          {/* TAB 2: MY TASKS - Reference Top-Right Card */}
+          {/* TAB 2: MY TASKS */}
           {activeTab === 'tasks' && (
             <div className="space-y-6">
-              {/* My Tasks Page Header */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    My Tasks
+                  <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-display">
+                    Tasks & Assignments
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-                    Manage all your assignments and stay on track.
+                  <p className="text-xs sm:text-sm text-slate-400 font-medium mt-0.5">
+                    Manage your coursework and track deadlines
                   </p>
                 </div>
 
                 <div className="flex items-center space-x-3 w-full sm:w-auto">
-                  {/* View Mode Toggle (Table / Grid) */}
-                  <div className="bg-slate-200/60 p-1 rounded-xl flex items-center space-x-1 text-xs">
+                  <div className="bg-[#111522] p-1 rounded-xl flex items-center space-x-1 text-xs border border-[#191B2B]">
                     <button
                       onClick={() => setViewMode('table')}
                       className={`p-1.5 rounded-lg cursor-pointer ${
-                        viewMode === 'table' ? 'bg-white text-indigo-600 shadow-2xs font-bold' : 'text-slate-500'
+                        viewMode === 'table' ? 'bg-[#9B6BFF] text-white font-bold' : 'text-slate-400'
                       }`}
                       title="Table View"
                     >
@@ -454,7 +452,7 @@ const Dashboard = () => {
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`p-1.5 rounded-lg cursor-pointer ${
-                        viewMode === 'grid' ? 'bg-white text-indigo-600 shadow-2xs font-bold' : 'text-slate-500'
+                        viewMode === 'grid' ? 'bg-[#9B6BFF] text-white font-bold' : 'text-slate-400'
                       }`}
                       title="Grid View"
                     >
@@ -462,18 +460,16 @@ const Dashboard = () => {
                     </button>
                   </div>
 
-                  {/* + Add Task Primary Button */}
                   <button
                     onClick={openCreateModal}
-                    className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 bg-[#4F46E5] hover:bg-indigo-600 active:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-md shadow-indigo-600/20 transition cursor-pointer"
+                    className="flex-1 sm:flex-none inline-flex items-center justify-center space-x-2 gradient-btn-purple font-bold text-xs px-4 py-2.5 rounded-xl cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>Add Task</span>
+                    <span>Create Task</span>
                   </button>
                 </div>
               </div>
 
-              {/* Filter Toolbar */}
               <TaskFilters
                 filterStatus={filterStatus}
                 onStatusChange={setFilterStatus}
@@ -488,7 +484,6 @@ const Dashboard = () => {
                 onResetFilters={resetFilters}
               />
 
-              {/* Task Table / Grid / Empty State */}
               {loading && tasks.length === 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <SkeletonCard />
@@ -529,7 +524,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* TAB 3: CALENDAR - Reference Bottom-Right Top Card */}
+          {/* TAB 3: CALENDAR */}
           {activeTab === 'calendar' && (
             <CalendarView
               tasks={tasks}
@@ -539,7 +534,7 @@ const Dashboard = () => {
             />
           )}
 
-          {/* TAB 4: ANALYTICS - Reference Bottom-Left Card */}
+          {/* TAB 4: ANALYTICS */}
           {activeTab === 'analytics' && <AnalyticsView />}
 
           {/* TAB 5: LOCATIONS */}
@@ -571,7 +566,7 @@ const Dashboard = () => {
             />
           )}
 
-          {/* TAB 9: PROFILE & SETTINGS */}
+          {/* TAB 9: PROFILE */}
           {activeTab === 'profile' && <ProfileView stats={stats} />}
 
           {/* TAB 10: SETTINGS */}
@@ -592,7 +587,7 @@ const Dashboard = () => {
         onOpenProModal={() => setIsProModalOpen(true)}
       />
 
-      {/* Upgrade to PRO Modal - Reference Bottom-Right Bottom-Left Card */}
+      {/* Upgrade to PRO Modal */}
       <ProModal
         isOpen={isProModalOpen}
         onClose={() => setIsProModalOpen(false)}

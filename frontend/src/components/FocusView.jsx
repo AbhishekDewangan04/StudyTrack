@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Play, Pause, RotateCcw, Sparkles } from 'lucide-react';
+import { Play, Pause, RotateCcw, Sparkles, Clock } from 'lucide-react';
 
 const STORAGE_KEY_SESSIONS = 'studytrack_focus_sessions';
 const STORAGE_KEY_PRESET = 'studytrack_focus_last_preset';
@@ -147,38 +147,45 @@ const FocusView = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-card">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-          Focus Mode
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-          Eliminate distractions and complete coursework in dedicated customizable focus sprints.
-        </p>
+    <div className="space-y-6 font-sans">
+      {/* Header Card */}
+      <div className="bg-[#151827] border border-[#2B2F45] p-6 rounded-2xl shadow-xl backdrop-blur-md relative overflow-hidden">
+        <div className="flex items-center space-x-3.5 relative z-10">
+          <div className="w-11 h-11 rounded-xl bg-[#272044] border border-[#9B6BFF]/30 flex items-center justify-center text-[#9B6BFF] shadow-inner shrink-0">
+            <Clock className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-black text-[#F1EEFF] tracking-tight font-display">
+              Focus Mode
+            </h1>
+            <p className="text-xs text-[#A5AAC2] font-medium mt-0.5">
+              Eliminate distractions and complete coursework in dedicated customizable focus sprints.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Main Focus Card */}
-      <div className="max-w-xl mx-auto bg-white border border-slate-200/80 p-8 rounded-3xl shadow-card flex flex-col items-center justify-center space-y-6 text-center">
+      <div className="max-w-xl mx-auto bg-[#151827] border border-[#2B2F45] p-8 sm:p-10 rounded-3xl shadow-2xl flex flex-col items-center justify-center space-y-7 text-center">
         {/* Session Counter Badge */}
-        <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 rounded-full text-xs font-extrabold bg-indigo-50 text-indigo-600 border border-indigo-100 shadow-2xs">
-          <Sparkles className="w-3.5 h-3.5" />
+        <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full text-xs font-extrabold bg-[#272044] text-[#9B6BFF] border border-[#9B6BFF]/30 shadow-inner">
+          <Sparkles className="w-3.5 h-3.5 text-[#9B6BFF]" />
           <span>Current Focus Session: #{currentSessionNumber}</span>
         </div>
 
         {/* Timer Display Circle */}
-        <div className="relative w-56 h-56 rounded-full border-4 border-indigo-100 bg-slate-50/80 flex flex-col items-center justify-center shadow-2xs">
-          <span className="text-5xl font-black text-slate-900 tracking-tight font-mono">
+        <div className="relative w-56 h-56 sm:w-64 sm:h-64 rounded-full border-4 border-[#2B2F45] bg-[#191C2D] flex flex-col items-center justify-center shadow-inner transition-all hover:border-[#9B6BFF]/40">
+          <span className="text-5xl sm:text-6xl font-black text-[#F1EEFF] tracking-tight font-mono">
             {formatTime(secondsLeft)}
           </span>
-          <span className="text-xs font-bold text-slate-400 mt-1">
+          <span className="text-xs font-bold text-[#A5AAC2] mt-2 tracking-wide uppercase">
             {isActive ? 'Deep Work In Progress' : 'Ready to start'}
           </span>
         </div>
 
         {/* Presets & Custom Duration Controls */}
-        <div className="space-y-3 w-full max-w-md">
-          <p className="text-xs font-bold text-slate-600 uppercase tracking-wider">Select Duration Preset</p>
+        <div className="space-y-3.5 w-full max-w-md">
+          <p className="text-xs font-bold text-[#A5AAC2] uppercase tracking-wider">Select Duration Preset</p>
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold">
             {[
               { label: '15m', secs: 15 * 60 },
@@ -191,11 +198,11 @@ const FocusView = () => {
                 key={p.label}
                 disabled={isActive}
                 onClick={() => handlePresetSelect(p.secs)}
-                className={`px-3.5 py-1.5 rounded-xl border transition cursor-pointer ${
+                className={`px-4 py-2 rounded-xl border transition cursor-pointer font-bold ${
                   !isCustomMode && selectedPreset === p.secs
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                }`}
+                    ? 'bg-[#272044] text-[#F1EEFF] border-[#9B6BFF] shadow-md shadow-[#9B6BFF]/20'
+                    : 'bg-[#1B1E30] hover:bg-[#272044]/60 text-[#A5AAC2] hover:text-[#F1EEFF] border-[#2B2F45] hover:border-[#9B6BFF]/30'
+                } disabled:opacity-50`}
               >
                 {p.label}
               </button>
@@ -204,7 +211,7 @@ const FocusView = () => {
 
           {/* Custom Duration Inputs */}
           <div className="pt-2 flex items-center justify-center space-x-2 text-xs">
-            <span className="font-semibold text-slate-500">Custom:</span>
+            <span className="font-semibold text-[#A5AAC2]">Custom:</span>
             <input
               type="number"
               min="0"
@@ -213,9 +220,9 @@ const FocusView = () => {
               disabled={isActive}
               value={customMins}
               onChange={(e) => setCustomMins(e.target.value)}
-              className="w-16 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-center font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
+              className="w-16 px-2.5 py-1.5 bg-[#191C2D] border border-[#2B2F45] focus:border-[#9B6BFF] rounded-xl text-center font-bold text-[#F1EEFF] placeholder-[#A5AAC2] focus:outline-none transition"
             />
-            <span className="font-bold text-slate-400">:</span>
+            <span className="font-bold text-[#A5AAC2]">:</span>
             <input
               type="number"
               min="0"
@@ -224,12 +231,12 @@ const FocusView = () => {
               disabled={isActive}
               value={customSecs}
               onChange={(e) => setCustomSecs(e.target.value)}
-              className="w-16 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-center font-bold text-slate-900 focus:outline-none focus:border-indigo-500"
+              className="w-16 px-2.5 py-1.5 bg-[#191C2D] border border-[#2B2F45] focus:border-[#9B6BFF] rounded-xl text-center font-bold text-[#F1EEFF] placeholder-[#A5AAC2] focus:outline-none transition"
             />
             <button
               disabled={isActive}
               onClick={handleApplyCustom}
-              className="px-3 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg transition cursor-pointer"
+              className="px-3.5 py-1.5 bg-[#272044] hover:bg-[#9B6BFF] text-[#F1EEFF] font-bold rounded-xl border border-[#2B2F45] hover:border-[#9B6BFF]/40 transition cursor-pointer disabled:opacity-50"
             >
               Set
             </button>
@@ -240,10 +247,10 @@ const FocusView = () => {
         <div className="flex items-center space-x-4 pt-2">
           <button
             onClick={toggleTimer}
-            className={`px-8 py-3 rounded-2xl text-xs font-extrabold text-white shadow-md transition flex items-center space-x-2 cursor-pointer ${
+            className={`px-8 py-3.5 rounded-2xl text-xs font-extrabold text-white shadow-xl transition flex items-center space-x-2.5 cursor-pointer ${
               isActive
                 ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
-                : 'bg-[#4F46E5] hover:bg-indigo-600 shadow-indigo-600/30'
+                : 'gradient-btn-purple shadow-[#9B6BFF]/30'
             }`}
           >
             {isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
@@ -252,23 +259,24 @@ const FocusView = () => {
 
           <button
             onClick={resetTimer}
-            className="p-3 bg-slate-100 hover:bg-slate-200/70 text-slate-600 rounded-2xl border border-slate-200 transition cursor-pointer"
+            className="p-3.5 bg-[#272044] hover:bg-[#272044]/80 text-[#A5AAC2] hover:text-[#F1EEFF] rounded-2xl border border-[#2B2F45] hover:border-[#9B6BFF]/40 transition cursor-pointer shadow-sm"
             title="Reset Timer"
+            aria-label="Reset Timer"
           >
             <RotateCcw className="w-4 h-4" />
           </button>
         </div>
 
         {/* Real Completed Sessions Stats */}
-        <div className="pt-4 border-t border-slate-100 w-full flex items-center justify-around text-xs">
+        <div className="pt-5 border-t border-[#2B2F45] w-full flex items-center justify-around text-xs">
           <div>
-            <p className="text-slate-400 font-semibold">Completed Today</p>
-            <p className="text-lg font-extrabold text-slate-900">{completedTodayCount} session{completedTodayCount !== 1 ? 's' : ''}</p>
+            <p className="text-[#A5AAC2] font-semibold">Completed Today</p>
+            <p className="text-lg font-black text-[#F1EEFF] mt-0.5">{completedTodayCount} session{completedTodayCount !== 1 ? 's' : ''}</p>
           </div>
-          <div className="h-8 w-px bg-slate-200" />
+          <div className="h-8 w-px bg-[#2B2F45]" />
           <div>
-            <p className="text-slate-400 font-semibold">Total Focus Time</p>
-            <p className="text-lg font-extrabold text-slate-900">{formatTotalTime(totalFocusSeconds)}</p>
+            <p className="text-[#A5AAC2] font-semibold">Total Focus Time</p>
+            <p className="text-lg font-black text-[#F1EEFF] mt-0.5">{formatTotalTime(totalFocusSeconds)}</p>
           </div>
         </div>
       </div>
@@ -277,4 +285,3 @@ const FocusView = () => {
 };
 
 export default FocusView;
-

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { analyticsAPI } from '../services/api';
-import { BarChart2, PieChart } from 'lucide-react';
+import { BarChart2, PieChart, TrendingUp, Award, Zap, CheckCircle2 } from 'lucide-react';
 import { SkeletonCard } from './ui/Skeleton';
 
 const AnalyticsView = () => {
@@ -44,33 +44,30 @@ const AnalyticsView = () => {
   const weeklyTrendList = Array.isArray(trends?.weeklyTrend) ? trends.weeklyTrend : [];
 
   const periodOptions = ['7 Days', '30 Days', '3 Months', '1 Year'];
-
-  // Palette colors for subjects
-  const colorPalette = ['#4F46E5', '#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#64748B'];
+  const colorPalette = ['#9B6BFF', '#FFBF69', '#38BDF8', '#34D399', '#F472B6', '#A78BFA'];
 
   return (
     <div className="space-y-6">
-      {/* Analytics Header & Period Selector */}
-      <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-card flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* Header & Period Selector */}
+      <div className="bg-[#191B2B] border border-[#191B2B] p-6 rounded-2xl shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-            Analytics
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight font-display">
+            Productivity Analytics
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            Track your progress and improve your productivity.
+          <p className="text-xs sm:text-sm text-slate-400 font-medium mt-1">
+            Real data performance metrics and assignment trends
           </p>
         </div>
 
-        {/* Period Selector Pills */}
-        <div className="bg-slate-100/80 p-1 rounded-2xl flex items-center space-x-1 border border-slate-200/60 text-xs font-semibold">
+        <div className="bg-[#111522] p-1 rounded-2xl flex items-center space-x-1 border border-[#191B2B] text-xs font-semibold">
           {periodOptions.map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer ${
                 period === p
-                  ? 'bg-indigo-600 text-white shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-[#9B6BFF] text-white font-bold'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               {p}
@@ -80,95 +77,75 @@ const AnalyticsView = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-2xl">
+        <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-2xl">
           {error}
         </div>
       )}
 
       {/* 4 Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Card 1: Completion Rate */}
-        <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-card space-y-2">
-          <span className="text-xs font-semibold text-slate-500">
-            Completion Rate
-          </span>
-          <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[#191B2B] border border-[#191B2B] hover:border-[#9B6BFF]/40 p-5 rounded-2xl transition space-y-2 shadow-xl">
+          <span className="text-xs font-semibold text-slate-400">Completion Rate</span>
+          <div className="text-3xl font-black text-white tracking-tight font-display">
             {completionRate}%
           </div>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 border border-emerald-100">
-            {totalTasksCount > 0 ? `${overview?.completedTasks || 0} of ${totalTasksCount} tasks completed` : 'No tasks logged'}
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            {totalTasksCount > 0 ? `${overview?.completedTasks || 0} of ${totalTasksCount} tasks` : '0 tasks'}
           </span>
         </div>
 
-        {/* Card 2: Current Streak */}
-        <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-card space-y-2">
-          <span className="text-xs font-semibold text-slate-500">
-            Current Streak
-          </span>
-          <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+        <div className="bg-[#191B2B] border border-[#191B2B] hover:border-[#FFBF69]/40 p-5 rounded-2xl transition space-y-2 shadow-xl">
+          <span className="text-xs font-semibold text-slate-400">Current Streak</span>
+          <div className="text-3xl font-black text-white tracking-tight font-display">
             {currentStreak} {currentStreak === 1 ? 'day' : 'days'}
           </div>
-          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 border border-amber-100">
-            {currentStreak > 0 ? 'Keep it going! 🔥' : 'Complete a task today to start'}
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FFBF69]/20 text-[#FFBF69] border border-[#FFBF69]/30">
+            {currentStreak > 0 ? 'Active streak! 🔥' : 'Complete a task today'}
           </span>
         </div>
 
-        {/* Card 3: Longest Streak */}
-        <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-card space-y-2">
-          <span className="text-xs font-semibold text-slate-500">
-            Longest Streak
-          </span>
-          <div className="text-3xl font-extrabold text-slate-900 tracking-tight">
+        <div className="bg-[#191B2B] border border-[#191B2B] p-5 rounded-2xl space-y-2 shadow-xl">
+          <span className="text-xs font-semibold text-slate-400">Longest Streak</span>
+          <div className="text-3xl font-black text-white tracking-tight font-display">
             {longestStreak} {longestStreak === 1 ? 'day' : 'days'}
           </div>
-          <span className="inline-flex items-center text-[11px] font-semibold text-slate-400">
-            Your best streak
+          <span className="inline-flex items-center text-[10px] font-bold text-slate-400">
+            All-time record
           </span>
         </div>
 
-        {/* Card 4: Most Productive Subject */}
-        <div className="bg-white border border-slate-200/80 p-5 rounded-2xl shadow-card space-y-2">
-          <span className="text-xs font-semibold text-slate-500">
-            Most Productive Subject
-          </span>
-          <div className="text-xl font-extrabold text-slate-900 tracking-tight truncate">
-            {topSubject || 'No data yet'}
+        <div className="bg-[#191B2B] border border-[#191B2B] p-5 rounded-2xl space-y-2 shadow-xl">
+          <span className="text-xs font-semibold text-slate-400">Top Subject</span>
+          <div className="text-xl font-black text-white tracking-tight font-display truncate">
+            {topSubject || 'No data'}
           </div>
-          <span className="inline-flex items-center text-[11px] font-semibold text-indigo-600">
-            {topSubject ? 'Highest completions' : 'Complete tasks to establish metrics'}
+          <span className="inline-flex items-center text-[10px] font-bold text-[#C4A7FF]">
+            {topSubject ? 'Highest completions' : 'Establishing metrics'}
           </span>
         </div>
       </div>
 
-      {/* Middle Grid: Task Completion Trend + Subject-wise Performance */}
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Task Completion Trend (2 Cols LG) */}
-        <div className="lg:col-span-2 bg-white border border-slate-200/80 p-6 rounded-2xl shadow-card flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-[#191B2B] border border-[#191B2B] p-6 rounded-2xl shadow-xl flex flex-col justify-between">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+            <h3 className="text-sm font-bold text-white tracking-tight font-display">
               Task Completion Trend
             </h3>
-            <div className="flex items-center space-x-3 text-xs font-medium text-slate-500">
+            <div className="flex items-center space-x-3 text-xs font-medium text-slate-400">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#9B6BFF]" />
                 <span>Completed</span>
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-300" />
+                <span className="w-2.5 h-2.5 rounded-full bg-[#FFBF69]" />
                 <span>Created</span>
               </span>
             </div>
           </div>
 
-          {/* Bar Chart Representation from REAL API trends */}
           {weeklyTrendList.length > 0 ? (
             <div className="relative h-48 flex items-end justify-between px-2 pt-6">
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none text-[10px] text-slate-200">
-                <div className="border-b border-slate-100 dark:border-slate-800 w-full" />
-                <div className="border-b border-slate-100 dark:border-slate-800 w-full" />
-                <div className="border-b border-slate-100 dark:border-slate-800 w-full" />
-              </div>
-
               {(() => {
                 const maxVal = Math.max(
                   1,
@@ -184,33 +161,21 @@ const AnalyticsView = () => {
 
                   return (
                     <div key={i} className="flex flex-col items-center space-y-2 z-10 flex-1">
-                      <div
-                        className="w-full flex items-end justify-center space-x-1"
-                        style={{ height: '130px' }}
-                      >
-                        {/* Created Bar */}
+                      <div className="w-full flex items-end justify-center space-x-1 h-32 px-1 bg-[#111522] rounded-xl p-1.5">
                         <div
-                          className={`w-3 sm:w-4 rounded-t-md transition-all duration-300 ${
-                            createdVal > 0
-                              ? 'bg-slate-300 dark:bg-slate-600 hover:bg-slate-400'
-                              : 'bg-transparent'
-                          }`}
-                          style={{ height: `${createdH}%` }}
-                          title={`Created: ${createdVal}`}
-                        />
-
-                        {/* Completed Bar */}
-                        <div
-                          className={`w-3 sm:w-4 rounded-t-md transition-all duration-300 ${
-                            completedVal > 0
-                              ? 'bg-indigo-600 hover:bg-indigo-700 shadow-2xs'
-                              : 'bg-transparent'
+                          className={`w-3 rounded-t-md transition-all ${
+                            completedVal > 0 ? 'bg-gradient-to-t from-[#9B6BFF] to-[#C4A7FF]' : 'bg-transparent'
                           }`}
                           style={{ height: `${completedH}%` }}
-                          title={`Completed: ${completedVal}`}
+                        />
+                        <div
+                          className={`w-3 rounded-t-md transition-all ${
+                            createdVal > 0 ? 'bg-gradient-to-t from-[#FFBF69] to-[#ffe3b3]' : 'bg-transparent'
+                          }`}
+                          style={{ height: `${createdH}%` }}
                         />
                       </div>
-                      <span className="text-[11px] font-semibold text-slate-500 truncate max-w-[45px]">
+                      <span className="text-[11px] font-bold text-slate-400">
                         {item.day || item.date || `D${i + 1}`}
                       </span>
                     </div>
@@ -219,66 +184,43 @@ const AnalyticsView = () => {
               })()}
             </div>
           ) : (
-            <div className="h-48 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50 p-6 text-center space-y-1">
-              <BarChart2 className="w-8 h-8 text-slate-300" />
-              <p className="text-xs font-bold text-slate-700">No trend analytics available yet</p>
+            <div className="h-48 flex flex-col items-center justify-center border border-dashed border-[#111522] rounded-xl bg-[#111522] p-6 text-center space-y-1">
+              <BarChart2 className="w-8 h-8 text-slate-500" />
+              <p className="text-xs font-bold text-white">No trend analytics available yet</p>
               <p className="text-[11px] text-slate-400 font-medium">Create and complete tasks over time to populate your trend chart.</p>
             </div>
           )}
         </div>
 
-        {/* Subject-wise Performance (Donut Chart) */}
-        <div className="bg-white border border-slate-200/80 p-6 rounded-2xl shadow-card flex flex-col justify-between">
-          <h3 className="text-sm font-bold text-slate-900 tracking-tight mb-4">
-            Subject-wise Performance
+        <div className="bg-[#191B2B] border border-[#191B2B] p-6 rounded-2xl shadow-xl flex flex-col justify-between">
+          <h3 className="text-sm font-bold text-white tracking-tight mb-4 font-display">
+            Subject Distribution
           </h3>
 
           {subjectList.length > 0 ? (
-            <div className="flex items-center justify-between space-x-4">
-              {/* Donut Chart SVG */}
-              <div className="relative w-32 h-32 flex items-center justify-center shrink-0">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                  <path
-                    className="text-indigo-600"
-                    strokeWidth="4"
-                    strokeDasharray="40, 100"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                  <path
-                    className="text-blue-500"
-                    strokeWidth="4"
-                    strokeDasharray="25, 100"
-                    strokeDashoffset="-40"
-                    stroke="currentColor"
-                    fill="none"
-                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                  />
-                </svg>
-                <div className="absolute flex flex-col items-center justify-center text-center">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase">Total</span>
-                  <span className="text-lg font-extrabold text-slate-900">{totalTasksCount}</span>
-                </div>
-              </div>
-
-              {/* Subject List Legend */}
-              <div className="space-y-1.5 flex-1 text-xs">
-                {subjectList.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between font-medium text-slate-700">
-                    <span className="flex items-center gap-1.5 truncate">
-                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: colorPalette[idx % colorPalette.length] }} />
-                      <span className="truncate max-w-[90px]">{item.subject || item._id}</span>
-                    </span>
-                    <span className="font-bold text-slate-900 shrink-0">{item.completed || item.count || item.total || 0}</span>
+            <div className="space-y-3">
+              {subjectList.map((item, idx) => (
+                <div key={idx} className="space-y-1">
+                  <div className="flex justify-between text-xs font-bold">
+                    <span className="text-slate-300">{item.subject || item._id}</span>
+                    <span className="text-[#C4A7FF]">{item.completed || item.count || 0} completed</span>
                   </div>
-                ))}
-              </div>
+                  <div className="w-full bg-[#111522] h-2 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${totalTasksCount > 0 ? Math.min(100, Math.round(((item.completed || item.count || 1) / totalTasksCount) * 100)) : 20}%`,
+                        backgroundColor: colorPalette[idx % colorPalette.length],
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
-            <div className="h-48 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl bg-slate-50/50 p-6 text-center space-y-1">
-              <PieChart className="w-8 h-8 text-slate-300" />
-              <p className="text-xs font-bold text-slate-700">No subject data available yet</p>
+            <div className="h-48 flex flex-col items-center justify-center border border-dashed border-[#111522] rounded-xl bg-[#111522] p-6 text-center space-y-1">
+              <PieChart className="w-8 h-8 text-slate-500" />
+              <p className="text-xs font-bold text-white">No subject data available</p>
               <p className="text-[11px] text-slate-400 font-medium">Categorize tasks by subject to see breakdown statistics.</p>
             </div>
           )}

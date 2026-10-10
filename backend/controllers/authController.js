@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../services/emailService');
 
@@ -69,6 +70,10 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Please provide email and password' });
     }
 
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database service unavailable. Please check server database connection.' });
+    }
+
     // Find user by email
     const user = await User.findOne({ email });
 
@@ -87,7 +92,9 @@ const loginUser = async (req, res) => {
     }
   } catch (error) {
     console.error('Login Error:', error.message);
-    return res.status(500).json({ message: 'Server error during login', error: error.message });
+    const isDbErr = error.name === 'MongooseError' || (error.message && error.message.includes('buffering timed out'));
+    const safeMsg = isDbErr ? 'Database service unavailable. Please check server database connection.' : (error.message || 'Server error during login');
+    return res.status(isDbErr ? 503 : 500).json({ message: safeMsg });
   }
 };
 
@@ -140,7 +147,7 @@ const forgotPassword = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // Construct reset URL with raw token
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const clientUrl = getClientUrl(req);
     const resetUrl = `${clientUrl}/reset-password/${rawResetToken}`;
 
     // Send reset email asynchronously (non-blocking)
@@ -206,23 +213,123 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const LOCAL_FRONTEND_ORIGIN = 'http://localhost:5173';
+const PROD_FRONTEND_ORIGIN = 'https://frontend-delta-fawn-99.vercel.app';
+const ALLOWED_FRONTEND_ORIGINS = [LOCAL_FRONTEND_ORIGIN, PROD_FRONTEND_ORIGIN];
+
+// Helper to safely parse URL string and extract exact origin
+const getExactOrigin = (urlStr) => {
+  if (!urlStr || typeof urlStr !== 'string') return null;
+  try {
+    const parsed = new URL(urlStr.trim());
+    return parsed.origin;
+  } catch (e) {
+    return null;
+  }
+};
+
+// Helper to sanitize & validate target frontend client URL against allowed origins
+const sanitizeClientUrl = (url) => {
+  if (!url || typeof url !== 'string') return null;
+  const trimmed = url.trim().replace(/\/+$/, '');
+  const origin = getExactOrigin(trimmed);
+  if (!origin) return null;
+  if (ALLOWED_FRONTEND_ORIGINS.includes(origin)) {
+    return origin;
+  }
+  if (origin === 'http://127.0.0.1:5173') {
+    return LOCAL_FRONTEND_ORIGIN;
+  }
+  return null;
+};
+
+// Helper to verify if host header corresponds to exact local backend host & expected port
+const isLocalHost = (hostHeader) => {
+  if (!hostHeader || typeof hostHeader !== 'string') return false;
+  const rawHost = hostHeader.trim().toLowerCase().split('/')[0];
+  if (!rawHost) return false;
+
+  // Handle bracketed IPv6 safely by rejecting non-IPv4/hostname formats
+  if (rawHost.includes('[') || rawHost.includes(']')) {
+    return false;
+  }
+
+  const parts = rawHost.split(':');
+  if (parts.length > 2) {
+    return false;
+  }
+
+  const [hostname, port] = parts;
+  const isLocalHostname = hostname === 'localhost' || hostname === '127.0.0.1';
+  if (!isLocalHostname) return false;
+
+  const expectedPort = String(process.env.PORT || 5000);
+  if (port !== undefined && port !== '') {
+    return port === expectedPort;
+  }
+  return true;
+};
+
+// Helper to determine target frontend client URL dynamically based on request environment
+const getClientUrl = (req) => {
+  if (req && req.headers) {
+    // 1. Check Origin header by exact URL parsing
+    if (req.headers.origin) {
+      const originMatch = sanitizeClientUrl(req.headers.origin);
+      if (originMatch) {
+        return originMatch;
+      }
+    }
+
+    // 2. Check Referer header by exact URL parsing
+    if (req.headers.referer) {
+      const refererMatch = sanitizeClientUrl(req.headers.referer);
+      if (refererMatch) {
+        return refererMatch;
+      }
+    }
+
+    // 3. Check Host header by exact local hostname and port matching
+    const host = req.headers['x-forwarded-host'] || (req.get && req.get('host')) || '';
+    if (isLocalHost(host)) {
+      return LOCAL_FRONTEND_ORIGIN;
+    }
+  }
+
+  // Fallback to process.env.CLIENT_URL if it matches allowed origins
+  const envSanitized = sanitizeClientUrl(process.env.CLIENT_URL);
+  if (envSanitized) {
+    return envSanitized;
+  }
+
+  // Default safe production frontend
+  return PROD_FRONTEND_ORIGIN;
+};
+
 // Helper to get Google Login redirect URI dynamically or from env
 const getLoginRedirectUri = (req) => {
+  const host = req ? (req.headers['x-forwarded-host'] || (req.get && req.get('host')) || '') : '';
+  if (isLocalHost(host)) {
+    return 'http://localhost:5000/api/auth/google/callback';
+  }
+
   if (process.env.GOOGLE_LOGIN_REDIRECT_URI) {
     return process.env.GOOGLE_LOGIN_REDIRECT_URI;
   }
   if (process.env.GOOGLE_REDIRECT_URI && process.env.GOOGLE_REDIRECT_URI.includes('/api/auth/google/callback')) {
     return process.env.GOOGLE_REDIRECT_URI;
   }
-  const protocol = req ? (req.headers['x-forwarded-proto'] || req.protocol || 'http') : 'http';
-  const host = req ? (req.headers['x-forwarded-host'] || req.get('host') || 'localhost:5000') : 'localhost:5000';
+
+  const protocol = req ? (req.headers['x-forwarded-proto'] || req.protocol || 'https') : 'https';
   return `${protocol}://${host}/api/auth/google/callback`;
 };
 
 // Helper to generate secure HMAC-signed state for Google Login
-const generateLoginState = () => {
+const generateLoginState = (clientUrl) => {
+  const safeClientUrl = sanitizeClientUrl(clientUrl) || PROD_FRONTEND_ORIGIN;
   const payload = JSON.stringify({
     type: 'google_login',
+    clientUrl: safeClientUrl,
     timestamp: Date.now(),
     nonce: crypto.randomBytes(16).toString('hex'),
   });
@@ -235,23 +342,27 @@ const generateLoginState = () => {
 
 // Helper to verify HMAC-signed state for Google Login
 const verifyLoginState = (stateStr) => {
-  if (!stateStr) return false;
+  if (!stateStr) return { valid: false };
   try {
     const { payload, hmac } = JSON.parse(Buffer.from(stateStr, 'base64').toString('utf8'));
     const expectedHmac = crypto
       .createHmac('sha256', process.env.JWT_SECRET || 'studytrack_secret_key')
       .update(payload)
       .digest('hex');
-    if (hmac !== expectedHmac) return false;
+    if (hmac !== expectedHmac) return { valid: false };
 
     const data = JSON.parse(payload);
-    if (data.type !== 'google_login') return false;
+    if (data.type !== 'google_login') return { valid: false };
     // Expire state after 15 minutes
-    if (Date.now() - data.timestamp > 15 * 60 * 1000) return false;
+    if (Date.now() - data.timestamp > 15 * 60 * 1000) return { valid: false };
 
-    return true;
+    // Strict validation: clientUrl in HMAC state MUST be an allowed frontend origin
+    const validatedClientUrl = sanitizeClientUrl(data.clientUrl);
+    if (!validatedClientUrl) return { valid: false };
+
+    return { valid: true, clientUrl: validatedClientUrl };
   } catch (e) {
-    return false;
+    return { valid: false };
   }
 };
 
@@ -262,6 +373,7 @@ const getGoogleAuthUrl = async (req, res) => {
   try {
     const { GOOGLE_CLIENT_ID } = process.env;
     const redirectUri = getLoginRedirectUri(req);
+    const clientUrl = getClientUrl(req);
 
     if (!GOOGLE_CLIENT_ID) {
       return res.status(400).json({
@@ -269,7 +381,7 @@ const getGoogleAuthUrl = async (req, res) => {
       });
     }
 
-    const state = generateLoginState();
+    const state = generateLoginState(clientUrl);
 
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
@@ -292,16 +404,19 @@ const getGoogleAuthUrl = async (req, res) => {
 // @route   GET /api/auth/google/callback
 // @access  Public
 const googleOAuthCallback = async (req, res) => {
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  try {
-    const { code, state, error } = req.query;
+  const { code, state, error } = req.query;
+  const stateResult = verifyLoginState(state);
+  const clientUrl = (stateResult.valid && stateResult.clientUrl)
+    ? stateResult.clientUrl
+    : getClientUrl(req);
 
+  try {
     if (error || !code) {
       return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent(error || 'Google login cancelled')}`);
     }
 
     // Secure CSRF state verification
-    if (!verifyLoginState(state)) {
+    if (!stateResult.valid) {
       console.error('Invalid or expired Google login state parameter');
       return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent('Invalid or expired state parameter. Please try logging in again.')}`);
     }
