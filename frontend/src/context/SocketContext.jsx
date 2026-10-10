@@ -4,7 +4,17 @@ import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+const getSocketUrl = () => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL;
+  }
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '');
+  }
+  return 'http://localhost:5000';
+};
+
+const SOCKET_URL = getSocketUrl();
 
 export const SocketProvider = ({ children }) => {
   const { token, isAuthenticated } = useAuth();
@@ -13,9 +23,12 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     if (isAuthenticated && token) {
-      // Create new socket connection with auth token
+      // Create new socket connection with dynamic auth token callback
       const socket = io(SOCKET_URL, {
-        auth: { token },
+        auth: (cb) => {
+          const activeToken = localStorage.getItem('token') || token;
+          cb({ token: activeToken });
+        },
         transports: ['websocket', 'polling'],
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -38,9 +51,20 @@ export const SocketProvider = ({ children }) => {
       socket.on('connect_error', (err) => {
         console.error('⚠️ Socket Connection Error:', err.message);
         setConnectionStatus('reconnecting');
+
+        if (err.message && err.message.includes('Authentication error')) {
+          const freshToken = localStorage.getItem('token');
+          if (freshToken) {
+            socket.auth = { token: freshToken };
+          }
+        }
       });
 
       socket.io.on('reconnect_attempt', () => {
+        const freshToken = localStorage.getItem('token');
+        if (freshToken) {
+          socket.auth = { token: freshToken };
+        }
         setConnectionStatus('reconnecting');
       });
 
