@@ -18,7 +18,21 @@ async function request(endpoint, method = 'GET', body = null, token = null) {
   return { status: res.status, data };
 }
 
+let tempServer = null;
+async function ensureServer() {
+  try {
+    const res = await fetch('http://localhost:5000/api/health');
+    if (res.ok) return;
+  } catch (err) {
+    const app = require('../server');
+    tempServer = await new Promise((resolve) => {
+      const s = app.listen(5000, () => resolve(s));
+    });
+  }
+}
+
 async function runTests() {
+  await ensureServer();
   console.log('🧪 Starting Phase 19 Analytics & Productivity Insights Tests...\n');
 
   // Test 1: GET /api/health
@@ -217,9 +231,12 @@ async function runTests() {
   await request(`/tasks/${t4.data._id}`, 'DELETE', null, token1);
 
   console.log('\n🎉 ALL PHASE 19 COMPREHENSIVE TESTS PASSED SUCCESSFULLY!\n');
+  if (tempServer) await new Promise((resolve) => tempServer.close(resolve));
+  process.exit(0);
 }
 
-runTests().catch((err) => {
+runTests().catch(async (err) => {
   console.error('Test execution error:', err);
+  if (tempServer) await new Promise((resolve) => tempServer.close(resolve));
   process.exit(1);
 });

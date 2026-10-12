@@ -209,14 +209,23 @@ const getAnalyticsTrends = async (req, res) => {
   try {
     const tasks = await Task.find({ user: req.user._id });
     const now = new Date();
+    const period = req.query.period || req.query.range || '7 Days';
 
-    // Weekly completion trend (past 7 days)
+    // Helper to format date YYYY-MM-DD in local time
+    const toDateKey = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const weeklyTrend = [];
 
+    // 1. Standard 7-day weekly trend (always returned for backwards compatibility)
+    const weeklyTrend = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
+      const dateStr = toDateKey(d);
       const dayName = dayNames[d.getDay()];
 
       const targetYear = d.getFullYear();
@@ -224,7 +233,7 @@ const getAnalyticsTrends = async (req, res) => {
       const targetDay = d.getDate();
 
       const createdCount = tasks.filter((t) => {
-        const cd = t.createdAt ? new Date(t.createdAt) : null;
+        const cd = t.createdAt ? new Date(t.createdAt) : t.updatedAt ? new Date(t.updatedAt) : null;
         if (!cd || isNaN(cd.getTime())) return false;
         return cd.getFullYear() === targetYear && cd.getMonth() === targetMonth && cd.getDate() === targetDay;
       }).length;
@@ -241,7 +250,106 @@ const getAnalyticsTrends = async (req, res) => {
         date: dateStr,
         createdCount,
         completedCount,
+        created: createdCount,
+        completed: completedCount,
       });
+    }
+
+    // 2. Dynamic trend based on requested timeframe
+    let trendData = weeklyTrend;
+
+    if (period === '30 Days') {
+      trendData = [];
+      for (let i = 29; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const dateStr = toDateKey(d);
+        const targetYear = d.getFullYear();
+        const targetMonth = d.getMonth();
+        const targetDay = d.getDate();
+
+        const createdCount = tasks.filter((t) => {
+          const cd = t.createdAt ? new Date(t.createdAt) : t.updatedAt ? new Date(t.updatedAt) : null;
+          if (!cd || isNaN(cd.getTime())) return false;
+          return cd.getFullYear() === targetYear && cd.getMonth() === targetMonth && cd.getDate() === targetDay;
+        }).length;
+
+        const completedCount = tasks.filter((t) => {
+          if (t.status !== 'Completed') return false;
+          const compDate = t.completedAt ? new Date(t.completedAt) : t.updatedAt ? new Date(t.updatedAt) : null;
+          if (!compDate || isNaN(compDate.getTime())) return false;
+          return compDate.getFullYear() === targetYear && compDate.getMonth() === targetMonth && compDate.getDate() === targetDay;
+        }).length;
+
+        trendData.push({
+          day: `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`,
+          date: dateStr,
+          createdCount,
+          completedCount,
+          created: createdCount,
+          completed: completedCount,
+        });
+      }
+    } else if (period === '3 Months') {
+      // 12 weekly buckets
+      trendData = [];
+      for (let w = 11; w >= 0; w--) {
+        const weekEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() - w * 7);
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (w + 1) * 7);
+        const label = `Wk ${12 - w}`;
+
+        const createdCount = tasks.filter((t) => {
+          const cd = t.createdAt ? new Date(t.createdAt) : t.updatedAt ? new Date(t.updatedAt) : null;
+          if (!cd || isNaN(cd.getTime())) return false;
+          return cd > weekStart && cd <= weekEnd;
+        }).length;
+
+        const completedCount = tasks.filter((t) => {
+          if (t.status !== 'Completed') return false;
+          const compDate = t.completedAt ? new Date(t.completedAt) : t.updatedAt ? new Date(t.updatedAt) : null;
+          if (!compDate || isNaN(compDate.getTime())) return false;
+          return compDate > weekStart && compDate <= weekEnd;
+        }).length;
+
+        trendData.push({
+          day: label,
+          date: toDateKey(weekEnd),
+          createdCount,
+          completedCount,
+          created: createdCount,
+          completed: completedCount,
+        });
+      }
+    } else if (period === '1 Year') {
+      // 12 monthly buckets
+      trendData = [];
+      for (let m = 11; m >= 0; m--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+        const targetYear = d.getFullYear();
+        const targetMonth = d.getMonth();
+        const monthLabel = d.toLocaleString('default', { month: 'short' });
+
+        const createdCount = tasks.filter((t) => {
+          const cd = t.createdAt ? new Date(t.createdAt) : t.updatedAt ? new Date(t.updatedAt) : null;
+          if (!cd || isNaN(cd.getTime())) return false;
+          return cd.getFullYear() === targetYear && cd.getMonth() === targetMonth;
+        }).length;
+
+        const completedCount = tasks.filter((t) => {
+          if (t.status !== 'Completed') return false;
+          const compDate = t.completedAt ? new Date(t.completedAt) : t.updatedAt ? new Date(t.updatedAt) : null;
+          if (!compDate || isNaN(compDate.getTime())) return false;
+          return compDate.getFullYear() === targetYear && compDate.getMonth() === targetMonth;
+        }).length;
+
+        trendData.push({
+          day: monthLabel,
+          date: `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}`,
+          createdCount,
+          completedCount,
+          created: createdCount,
+          completed: completedCount,
+        });
+      }
     }
 
     // Upcoming deadlines in next 7 days
@@ -256,6 +364,8 @@ const getAnalyticsTrends = async (req, res) => {
 
     return res.status(200).json({
       weeklyTrend,
+      trendData,
+      period,
       upcomingDeadlinesCount,
       overdueCount,
     });

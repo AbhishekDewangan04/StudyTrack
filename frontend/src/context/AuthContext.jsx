@@ -140,6 +140,44 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update user profile (name, email, preferences) via backend API
+  const updateProfile = async (profileData) => {
+    try {
+      const updatedUser = await authAPI.updateProfile(profileData);
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return updatedUser;
+    } catch (err) {
+      console.error('Failed to update user profile:', err);
+      throw err;
+    }
+  };
+
+  // Update user preferences via backend API
+  const updatePreferences = async (preferencesData) => {
+    try {
+      const res = await authAPI.updatePreferences(preferencesData);
+      if (res && res.preferences) {
+        setUser((prevUser) => {
+          if (!prevUser) return prevUser;
+          const updated = {
+            ...prevUser,
+            preferences: {
+              ...(prevUser.preferences || {}),
+              ...res.preferences,
+            },
+          };
+          localStorage.setItem('user', JSON.stringify(updated));
+          return updated;
+        });
+      }
+      return res;
+    } catch (err) {
+      console.error('Failed to update user preferences:', err);
+      throw err;
+    }
+  };
+
   const value = {
     user,
     token,
@@ -150,6 +188,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUserData,
+    updateProfile,
+    updatePreferences,
     refreshUser,
     setError,
   };

@@ -61,6 +61,18 @@ export const authAPI = {
       method: 'GET',
     }),
 
+  updateProfile: (profileData) =>
+    request('/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    }),
+
+  updatePreferences: (preferencesData) =>
+    request('/auth/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(preferencesData),
+    }),
+
   getGoogleAuthUrl: () =>
     request('/auth/google', {
       method: 'GET',
@@ -125,7 +137,16 @@ export const calendarAPI = {
 export const analyticsAPI = {
   getOverview: () => request('/analytics/overview', { method: 'GET' }),
   getSubjects: () => request('/analytics/subjects', { method: 'GET' }),
-  getTrends: () => request('/analytics/trends', { method: 'GET' }),
+  getTrends: (params = {}) => {
+    const query = new URLSearchParams();
+    Object.keys(params).forEach((key) => {
+      if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+        query.append(key, params[key]);
+      }
+    });
+    const queryString = query.toString();
+    return request(`/analytics/trends${queryString ? `?${queryString}` : ''}`, { method: 'GET' });
+  },
 };
 
 // Gemini AI Bot API endpoints

@@ -60,6 +60,37 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    preferences: {
+      defaultTaskLayout: {
+        type: String,
+        enum: ['table', 'grid'],
+        default: 'table',
+      },
+      taskReminders: {
+        type: Boolean,
+        default: true,
+      },
+      overdueTasks: {
+        type: Boolean,
+        default: true,
+      },
+      weeklySummary: {
+        type: Boolean,
+        default: true,
+      },
+      productUpdates: {
+        type: Boolean,
+        default: false,
+      },
+      emailAlerts: {
+        type: Boolean,
+        default: true,
+      },
+      overdueAlerts: {
+        type: Boolean,
+        default: true,
+      },
+    },
   },
   {
     timestamps: true,

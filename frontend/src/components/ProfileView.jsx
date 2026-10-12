@@ -1,20 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Bell, Calendar, Crown, Shield, Palette, Check } from 'lucide-react';
+import { User, Bell, Shield, Check, AlertCircle, Save } from 'lucide-react';
 
 const ProfileView = ({ stats }) => {
-  const { user } = useAuth();
-  const [activeSubSection, setActiveSubSection] = useState('notifications');
-  const [nameInput, setNameInput] = useState(user?.name || 'Student');
-  const [emailInput, setEmailInput] = useState(user?.email || 'student@studytrack.io');
+  const { user, updateProfile, updatePreferences } = useAuth();
+  const [activeSubSection, setActiveSubSection] = useState('profile');
+  const [nameInput, setNameInput] = useState(user?.name || '');
+  const [emailInput, setEmailInput] = useState(user?.email || '');
   const [savedMsg, setSavedMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   const [prefs, setPrefs] = useState({
-    taskReminders: true,
-    overdueTasks: true,
-    weeklySummary: true,
-    productUpdates: false,
+    taskReminders: user?.preferences?.taskReminders ?? true,
+    overdueTasks: user?.preferences?.overdueTasks ?? true,
+    weeklySummary: user?.preferences?.weeklySummary ?? true,
+    productUpdates: user?.preferences?.productUpdates ?? false,
   });
+
+  // Keep inputs in sync when user context loads or updates
+  useEffect(() => {
+    if (user) {
+      if (user.name) setNameInput(user.name);
+      if (user.email) setEmailInput(user.email);
+      if (user.preferences) {
+        setPrefs({
+          taskReminders: user.preferences.taskReminders ?? true,
+          overdueTasks: user.preferences.overdueTasks ?? true,
+          weeklySummary: user.preferences.weeklySummary ?? true,
+          productUpdates: user.preferences.productUpdates ?? false,
+        });
+      }
+    }
+  }, [user]);
 
   const getInitials = (name) => {
     if (!name) return 'S';
@@ -30,10 +48,57 @@ const ProfileView = ({ stats }) => {
     setPrefs((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleUpdateProfile = (e) => {
+  const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    setSavedMsg('Profile updated successfully!');
-    setTimeout(() => setSavedMsg(null), 3000);
+    if (!nameInput.trim()) {
+      setErrorMsg('Full name cannot be blank');
+      return;
+    }
+    if (!emailInput.trim()) {
+      setErrorMsg('Email address cannot be blank');
+      return;
+    }
+
+    setSaving(true);
+    setErrorMsg(null);
+    setSavedMsg(null);
+
+    try {
+      await updateProfile({
+        name: nameInput.trim(),
+        email: emailInput.trim(),
+      });
+      setSavedMsg('Profile updated successfully!');
+      setTimeout(() => setSavedMsg(null), 3000);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setErrorMsg(err.message || 'Failed to update profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveNotifications = async (e) => {
+    if (e) e.preventDefault();
+    setSaving(true);
+    setErrorMsg(null);
+    setSavedMsg(null);
+
+    try {
+      await updatePreferences({
+        taskReminders: prefs.taskReminders,
+        overdueTasks: prefs.overdueTasks,
+        weeklySummary: prefs.weeklySummary,
+        productUpdates: prefs.productUpdates,
+      });
+      setSavedMsg('Notification preferences saved!');
+      setTimeout(() => setSavedMsg(null), 3000);
+    } catch (err) {
+      console.error('Error saving notification preferences:', err);
+      setErrorMsg(err.message || 'Failed to save notifications preferences.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const subNavItems = [
@@ -53,17 +118,17 @@ const ProfileView = ({ stats }) => {
           Manage your personal information and preferences
         </p>
 
-        {/* User Avatar Card Header (Matching Section 9 of reference image) */}
+        {/* User Avatar Card Header */}
         <div className="mt-6 flex items-center space-x-4 p-4 bg-[#111522] border border-[#191B2B] rounded-2xl">
           <div className="w-14 h-14 rounded-full bg-[#9B6BFF] text-white font-black text-lg flex items-center justify-center border-2 border-[#C4A7FF]/40 shadow-lg shrink-0 font-display">
             {getInitials(user?.name)}
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-base font-bold text-white truncate font-display">
-              {user?.name || 'Abhishek Dewangan'}
+              {user?.name || 'Student'}
             </h3>
             <p className="text-xs text-slate-400 truncate">
-              {user?.email || 'abhishek@example.com'}
+              {user?.email || 'student@studytrack.io'}
             </p>
           </div>
           <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
@@ -76,7 +141,7 @@ const ProfileView = ({ stats }) => {
         </div>
       </div>
 
-      {/* Two Column Layout (Matching Reference Image Section 9) */}
+      {/* Two Column Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Sub-Nav List */}
         <div className="bg-[#191B2B] border border-[#191B2B] p-3 rounded-2xl shadow-xl space-y-1 h-fit">
@@ -86,7 +151,11 @@ const ProfileView = ({ stats }) => {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveSubSection(item.id)}
+                onClick={() => {
+                  setActiveSubSection(item.id);
+                  setErrorMsg(null);
+                  setSavedMsg(null);
+                }}
                 className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
                   isActive
                     ? 'bg-[#9B6BFF]/20 text-white font-bold border border-[#9B6BFF]/40'
@@ -110,9 +179,17 @@ const ProfileView = ({ stats }) => {
             </h3>
           </div>
 
+          {/* Feedback Messages */}
+          {errorMsg && (
+            <div className="p-3 bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs font-bold rounded-xl flex items-center space-x-2 animate-fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {savedMsg && (
-            <div className="p-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold rounded-xl flex items-center space-x-2">
-              <Check className="w-4 h-4 text-emerald-400" />
+            <div className="p-3 bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs font-bold rounded-xl flex items-center space-x-2 animate-fade-in">
+              <Check className="w-4 h-4 shrink-0 text-emerald-400" />
               <span>{savedMsg}</span>
             </div>
           )}
@@ -125,6 +202,7 @@ const ProfileView = ({ stats }) => {
                   type="text"
                   value={nameInput}
                   onChange={(e) => setNameInput(e.target.value)}
+                  placeholder="Enter your name"
                   className="w-full px-3.5 py-2.5 bg-[#090B12] border border-[#111522] rounded-xl text-white outline-none focus:border-[#9B6BFF]"
                 />
               </div>
@@ -135,21 +213,24 @@ const ProfileView = ({ stats }) => {
                   type="email"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
+                  placeholder="Enter your email"
                   className="w-full px-3.5 py-2.5 bg-[#090B12] border border-[#111522] rounded-xl text-white outline-none focus:border-[#9B6BFF]"
                 />
               </div>
 
               <button
                 type="submit"
-                className="gradient-btn-purple px-5 py-2.5 rounded-xl font-bold text-xs text-white cursor-pointer shadow-md"
+                disabled={saving}
+                className="gradient-btn-purple px-5 py-2.5 rounded-xl font-bold text-xs text-white cursor-pointer shadow-md disabled:opacity-50 flex items-center space-x-2"
               >
-                Save Profile Changes
+                {saving && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                <span>{saving ? 'Saving Changes...' : 'Save Profile Changes'}</span>
               </button>
             </form>
           )}
 
           {activeSubSection === 'notifications' && (
-            <div className="space-y-5">
+            <form onSubmit={handleSaveNotifications} className="space-y-5">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-white">Task Reminders</p>
@@ -181,7 +262,50 @@ const ProfileView = ({ stats }) => {
                   <span className="w-4 h-4 rounded-full bg-white shadow-xs" />
                 </button>
               </div>
-            </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-white">Weekly Summary Digest</p>
+                  <p className="text-[11px] text-slate-400">Receive weekly progress reports and study stats</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggle('weeklySummary')}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                    prefs.weeklySummary ? 'bg-[#9B6BFF] justify-end' : 'bg-[#111522] justify-start'
+                  }`}
+                >
+                  <span className="w-4 h-4 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-white">Product & Feature Updates</p>
+                  <p className="text-[11px] text-slate-400">Stay informed about new StudyTrack tools</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggle('productUpdates')}
+                  className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${
+                    prefs.productUpdates ? 'bg-[#9B6BFF] justify-end' : 'bg-[#111522] justify-start'
+                  }`}
+                >
+                  <span className="w-4 h-4 rounded-full bg-white shadow-xs" />
+                </button>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="gradient-btn-purple px-5 py-2.5 rounded-xl font-bold text-xs text-white cursor-pointer shadow-md disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {saving && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  <span>{saving ? 'Saving...' : 'Save Notification Preferences'}</span>
+                </button>
+              </div>
+            </form>
           )}
 
           {activeSubSection === 'security' && (

@@ -4,6 +4,8 @@ const {
   registerUser,
   loginUser,
   getMe,
+  updateProfile,
+  updatePreferences,
   forgotPassword,
   resetPassword,
   getGoogleAuthUrl,
@@ -24,5 +26,8 @@ router.get('/google/callback', googleOAuthCallback);
 // Protected auth route (Requires valid Bearer token)
 router.get('/me', protect, getMe);
 router.get('/get-me', protect, getMe);
+router.put('/me', protect, updateProfile);
+router.put('/profile', protect, updateProfile);
+router.put('/preferences', protect, updatePreferences);
 
 module.exports = router;

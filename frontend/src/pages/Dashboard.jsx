@@ -26,7 +26,7 @@ import QuickActions from '../components/dashboard/QuickActions';
 import EmptyState from '../components/ui/EmptyState';
 import { SkeletonCard } from '../components/ui/Skeleton';
 
-import { BookOpen, AlertCircle, Plus, LayoutGrid, List, CheckCircle2, Clock } from 'lucide-react';
+import { AlertCircle, Plus, LayoutGrid, List, Clock } from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -47,7 +47,10 @@ const Dashboard = () => {
   };
 
   const [isProModalOpen, setIsProModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('table');
+  const [viewModeOverride, setViewModeOverride] = useState(null);
+  const viewMode = viewModeOverride ?? user?.preferences?.defaultTaskLayout ?? 'table';
+  const setViewMode = setViewModeOverride;
+
   const [sortBy, setSortBy] = useState('deadline');
 
   // Task Data & API State

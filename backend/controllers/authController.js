@@ -62,6 +62,7 @@ const registerUser = async (req, res) => {
         email: user.email,
         isPro: !!user.isPro,
         googleCalendarConnected: !!user.googleCalendarConnected,
+        preferences: user.preferences,
         token: generateToken(user._id),
       });
     } else {
@@ -108,6 +109,7 @@ const loginUser = async (req, res) => {
         email: user.email,
         isPro: !!user.isPro,
         googleCalendarConnected: !!user.googleCalendarConnected,
+        preferences: user.preferences,
         token: generateToken(user._id),
       });
     } else {
@@ -131,6 +133,126 @@ const getMe = async (req, res) => {
   } catch (error) {
     console.error('GetMe Error:', error.message);
     return res.status(500).json({ message: 'Server error fetching profile' });
+  }
+};
+
+// @desc    Update logged in user profile (name, email, and preferences)
+// @route   PUT /api/auth/profile or PUT /api/auth/me
+// @access  Private (Requires Bearer token)
+const updateProfile = async (req, res) => {
+  try {
+    // Ensure database connection is established in serverless environments
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectDB();
+      } catch (dbErr) {
+        // Will be caught below
+      }
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database service unavailable. Please check server database connection.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const { name, email, preferences } = req.body;
+
+    if (name !== undefined) {
+      if (!name || !name.trim()) {
+        return res.status(400).json({ message: 'Name cannot be empty' });
+      }
+      user.name = name.trim();
+    }
+
+    if (email !== undefined) {
+      const emailTrimmed = email.trim().toLowerCase();
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!emailTrimmed || !emailRegex.test(emailTrimmed)) {
+        return res.status(400).json({ message: 'Please provide a valid email address' });
+      }
+
+      if (emailTrimmed !== user.email) {
+        const existing = await User.findOne({ email: emailTrimmed, _id: { $ne: user._id } });
+        if (existing) {
+          return res.status(400).json({ message: 'Email already in use by another account' });
+        }
+        user.email = emailTrimmed;
+      }
+    }
+
+    if (preferences && typeof preferences === 'object') {
+      const currentPrefs = user.preferences?.toObject ? user.preferences.toObject() : (user.preferences || {});
+      user.preferences = {
+        ...currentPrefs,
+        ...preferences,
+      };
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      isPro: !!user.isPro,
+      googleCalendarConnected: !!user.googleCalendarConnected,
+      preferences: user.preferences,
+      message: 'Profile updated successfully',
+    });
+  } catch (error) {
+    console.error('UpdateProfile Error:', error.message);
+    return res.status(500).json({ message: 'Server error updating profile', error: error.message });
+  }
+};
+
+// @desc    Update logged in user preferences
+// @route   PUT /api/auth/preferences
+// @access  Private (Requires Bearer token)
+const updatePreferences = async (req, res) => {
+  try {
+    // Ensure database connection is established in serverless environments
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectDB();
+      } catch (dbErr) {
+        // Will be caught below
+      }
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database service unavailable. Please check server database connection.' });
+    }
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const preferences = req.body;
+    if (!preferences || typeof preferences !== 'object') {
+      return res.status(400).json({ message: 'Invalid preferences payload' });
+    }
+
+    const currentPrefs = user.preferences?.toObject ? user.preferences.toObject() : (user.preferences || {});
+    user.preferences = {
+      ...currentPrefs,
+      ...preferences,
+    };
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      preferences: user.preferences,
+      message: 'Preferences saved successfully',
+    });
+  } catch (error) {
+    console.error('UpdatePreferences Error:', error.message);
+    return res.status(500).json({ message: 'Server error updating preferences', error: error.message });
   }
 };
 
@@ -561,6 +683,8 @@ module.exports = {
   registerUser,
   loginUser,
   getMe,
+  updateProfile,
+  updatePreferences,
   forgotPassword,
   resetPassword,
   getGoogleAuthUrl,
