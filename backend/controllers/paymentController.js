@@ -1,6 +1,5 @@
 const User = require('../models/User');
 const { getRazorpayConfig, createRazorpayOrder, verifyPaymentSignature } = require('../services/paymentService');
-const { emitToUser } = require('../config/socket');
 
 // @desc    Get Razorpay Public Key & Config Status
 // @route   GET /api/payments/config
@@ -85,15 +84,6 @@ const verifyPayment = async (req, res) => {
       { isPro: true },
       { new: true }
     ).select('-password');
-
-    // Notify user via Socket.IO real-time notification
-    emitToUser(req.user._id, 'notification:new', {
-      id: `pro-upgrade-${Date.now()}`,
-      type: 'completed',
-      title: 'StudyTrack PRO Activated! 🌟',
-      message: 'Your account has been upgraded to StudyTrack PRO Tier.',
-      timestamp: new Date().toISOString(),
-    });
 
     return res.status(200).json({
       success: true,

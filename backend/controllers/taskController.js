@@ -1,5 +1,4 @@
 const Task = require('../models/Task');
-const { emitToUser } = require('../config/socket');
 const { buildGoogleMapsUrl } = require('../utils/mapsHelper');
 
 /**
@@ -245,16 +244,6 @@ const createTask = async (req, res) => {
       recurrenceEndDate: recEndDate,
     });
 
-    // Real-time WebSocket emission to user room
-    emitToUser(req.user._id, 'task:created', task);
-    emitToUser(req.user._id, 'notification:new', {
-      id: task._id.toString() + '-created',
-      type: 'created',
-      title: 'Assignment Created',
-      message: `"${task.title}" (${task.subject}) was added to your planner.`,
-      timestamp: new Date().toISOString(),
-    });
-
     return res.status(201).json(task);
   } catch (error) {
     console.error('CreateTask Error:', error.message);
@@ -450,16 +439,6 @@ const updateTask = async (req, res) => {
       }).catch(() => {});
     }
 
-    // Real-time WebSocket emission to user room
-    emitToUser(req.user._id, 'task:updated', updatedTask);
-    emitToUser(req.user._id, 'notification:new', {
-      id: updatedTask._id.toString() + '-updated-' + Date.now(),
-      type: 'updated',
-      title: updatedTask.status === 'Completed' ? 'Assignment Completed 🎉' : 'Assignment Updated',
-      message: `"${updatedTask.title}" status is now ${updatedTask.status}.`,
-      timestamp: new Date().toISOString(),
-    });
-
     return res.status(200).json(updatedTask);
   } catch (error) {
     console.error('UpdateTask Error:', error.message);
@@ -503,16 +482,6 @@ const deleteTask = async (req, res) => {
         }
       }).catch(() => {});
     }
-
-    // Real-time WebSocket emission to user room
-    emitToUser(req.user._id, 'task:deleted', { id: req.params.id });
-    emitToUser(req.user._id, 'notification:new', {
-      id: req.params.id + '-deleted-' + Date.now(),
-      type: 'deleted',
-      title: 'Assignment Removed',
-      message: `"${deletedTitle}" was removed from your planner.`,
-      timestamp: new Date().toISOString(),
-    });
 
     return res.status(200).json({ id: req.params.id, message: 'Task deleted successfully' });
   } catch (error) {

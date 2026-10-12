@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { SocketProvider } from './context/SocketContext';
 import { ThemeProvider } from './context/ThemeContext';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -62,9 +61,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <SocketProvider>
-          <AppContent />
-        </SocketProvider>
+        <AppContent />
       </AuthProvider>
     </ThemeProvider>
   );

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
 import {
   Menu,
   LogOut,
@@ -15,7 +14,6 @@ const Header = ({
   activeTab = 'overview',
 }) => {
   const { user, logout } = useAuth();
-  const { connectionStatus } = useSocket();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const getInitials = (name) => {
@@ -76,22 +74,8 @@ const Header = ({
         </h1>
       </div>
 
-      {/* Right Section: Socket status, AI badge, User Menu */}
+      {/* Right Section: User Menu */}
       <div className="flex items-center space-x-3">
-        {/* Real-time Socket Indicator */}
-        <div
-          title={`Socket status: ${connectionStatus}`}
-          className="hidden sm:inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-[#111522] border border-[#191B2B] text-slate-400"
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              connectionStatus === 'connected'
-                ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50 animate-pulse'
-                : 'bg-amber-400'
-            }`}
-          />
-          <span className="capitalize">{connectionStatus}</span>
-        </div>
 
         {/* User Profile Avatar & Dropdown */}
         <div className="relative">

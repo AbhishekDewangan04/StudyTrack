@@ -7,12 +7,10 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 console.log('🤖 Gemini API Key present:', Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()));
 
 const express = require('express');
-const http = require('http');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const connectDB = require('./config/db');
 const { getDBDiagnostics, getMongoUriMetadata } = connectDB;
-const { initSocket } = require('./config/socket');
 const { initScheduler } = require('./services/schedulerService');
 
 // Safe runtime verification for MongoDB URI (never exposes credentials or hosts)
@@ -23,10 +21,6 @@ console.log(`📦 MongoDB URI configured: ${mongoMeta.configured} (protocol: ${m
 connectDB();
 
 const app = express();
-const server = http.createServer(app);
-
-// Initialize Socket.IO with HTTP server
-initSocket(server);
 
 // Initialize Background Email Scheduler Service
 initScheduler();
@@ -77,7 +71,7 @@ app.get('/api/health', async (req, res) => {
   }
   res.status(200).json({
     status: 'OK',
-    message: 'StudyTrack Backend API & WebSockets are up and running!',
+    message: 'StudyTrack Backend API is up and running!',
     timestamp: new Date().toISOString(),
     database: getDBDiagnostics(),
   });
@@ -104,7 +98,7 @@ app.use('/api/ai', require('./routes/aiRoutes'));
 
 // Root Route
 app.get('/', (req, res) => {
-  res.send('StudyTrack API & WebSocket Server is live. Access GET /api/health for system status.');
+  res.send('StudyTrack API Server is live. Access GET /api/health for system status.');
 });
 
 // Export Express app for Vercel Serverless Functions
@@ -113,7 +107,7 @@ module.exports = app;
 // Start listening on configured port when run directly (standalone server)
 if (require.main === module) {
   const PORT = process.env.PORT || 5000;
-  server.listen(PORT, () => {
-    console.log(`🚀 StudyTrack Server & Socket.IO running on http://localhost:${PORT}`);
+  app.listen(PORT, () => {
+    console.log(`🚀 StudyTrack Server running on http://localhost:${PORT}`);
   });
 }

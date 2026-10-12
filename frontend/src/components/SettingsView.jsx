@@ -105,8 +105,8 @@ const SettingsView = ({ viewMode, onViewModeChange }) => {
 
             <div className="flex items-center justify-between pt-3 border-t border-[#111522]">
               <div>
-                <span className="text-xs font-bold text-white block">Real-time Header Notifications</span>
-                <span className="text-[11px] text-slate-400">Display live WebSocket notification counts in header bell.</span>
+                <span className="text-xs font-bold text-white block">Header Notification Badges</span>
+                <span className="text-[11px] text-slate-400">Display notification counts in header bell.</span>
               </div>
               <input
                 type="checkbox"

@@ -212,9 +212,9 @@ export default function Landing({ onNavigateToLogin, onNavigateToRegister }) {
               <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
                 <ShieldCheck className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white">Real-Time Sync</h3>
+              <h3 className="text-lg font-bold text-white">Cloud Sync</h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Stay updated across all devices instantly with WebSockets, overdue alerts, and desktop reminders.
+                Stay updated across all devices with instant cloud sync, overdue alerts, and smart reminders.
               </p>
             </div>
           </div>

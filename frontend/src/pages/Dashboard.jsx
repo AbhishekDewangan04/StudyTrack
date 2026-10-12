@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { taskAPI } from '../services/api';
-import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -72,8 +71,6 @@ const Dashboard = () => {
   const [modalMode, setModalMode] = useState('create');
   const [selectedTask, setSelectedTask] = useState(null);
 
-  const { socket } = useSocket();
-
   // Helper to recompute stats dynamically
   const computeStats = (taskList) => {
     const now = new Date();
@@ -119,55 +116,23 @@ const Dashboard = () => {
     fetchData();
   }, [fetchData]);
 
-  // Real-Time Socket.IO Event Listeners
+  // Periodic lightweight background sync (every 45s) and refetch on tab focus
   useEffect(() => {
-    if (!socket) return;
+    const interval = setInterval(() => {
+      fetchData();
+    }, 45000);
 
-    const handleTaskCreated = (newTask) => {
-      setTasks((prevTasks) => {
-        const exists = prevTasks.some((t) => t._id === newTask._id);
-        const updatedList = exists
-          ? prevTasks.map((t) => (t._id === newTask._id ? newTask : t))
-          : [newTask, ...prevTasks];
-        setStats(computeStats(updatedList));
-        return updatedList;
-      });
+    const handleFocus = () => {
+      fetchData();
     };
 
-    const handleTaskUpdated = (updatedTask) => {
-      setTasks((prevTasks) => {
-        const updatedList = prevTasks.map((t) =>
-          t._id === updatedTask._id ? updatedTask : t
-        );
-        setStats(computeStats(updatedList));
-        return updatedList;
-      });
-    };
-
-    const handleTaskDeleted = ({ id }) => {
-      setTasks((prevTasks) => {
-        const updatedList = prevTasks.filter((t) => t._id !== id);
-        setStats(computeStats(updatedList));
-        return updatedList;
-      });
-    };
-
-    const handleNewNotification = (notif) => {
-      setLiveNotifications((prev) => [notif, ...prev.slice(0, 19)]);
-    };
-
-    socket.on('task:created', handleTaskCreated);
-    socket.on('task:updated', handleTaskUpdated);
-    socket.on('task:deleted', handleTaskDeleted);
-    socket.on('notification:new', handleNewNotification);
+    window.addEventListener('focus', handleFocus);
 
     return () => {
-      socket.off('task:created', handleTaskCreated);
-      socket.off('task:updated', handleTaskUpdated);
-      socket.off('task:deleted', handleTaskDeleted);
-      socket.off('notification:new', handleNewNotification);
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, [socket]);
+  }, [fetchData]);
 
   // Filtered tasks computation
   const filteredTasks = useMemo(() => {
@@ -232,18 +197,76 @@ const Dashboard = () => {
 
   // Task Operations
   const handleCreate = async (formData) => {
-    await taskAPI.createTask(formData);
+    try {
+      const newTask = await taskAPI.createTask(formData);
+      setTasks((prev) => {
+        const next = [newTask, ...prev.filter((t) => t._id !== newTask._id)];
+        setStats(computeStats(next));
+        return next;
+      });
+      setLiveNotifications((prev) => [
+        {
+          id: `${newTask._id}-created-${Date.now()}`,
+          type: 'created',
+          title: 'Assignment Created',
+          message: `"${newTask.title}" (${newTask.subject}) was added to your planner.`,
+          timestamp: new Date().toISOString(),
+        },
+        ...prev.slice(0, 19),
+      ]);
+      fetchData();
+    } catch (err) {
+      console.error('Error creating task:', err);
+      throw err;
+    }
   };
 
   const handleUpdate = async (formData) => {
     if (!selectedTask) return;
-    await taskAPI.updateTask(selectedTask._id, formData);
+    try {
+      const updated = await taskAPI.updateTask(selectedTask._id, formData);
+      setTasks((prev) => {
+        const next = prev.map((t) => (t._id === updated._id ? updated : t));
+        setStats(computeStats(next));
+        return next;
+      });
+      setLiveNotifications((prev) => [
+        {
+          id: `${updated._id}-updated-${Date.now()}`,
+          type: 'updated',
+          title: updated.status === 'Completed' ? 'Assignment Completed 🎉' : 'Assignment Updated',
+          message: `"${updated.title}" status is now ${updated.status}.`,
+          timestamp: new Date().toISOString(),
+        },
+        ...prev.slice(0, 19),
+      ]);
+      fetchData();
+    } catch (err) {
+      console.error('Error updating task:', err);
+      throw err;
+    }
   };
 
   const handleToggleStatus = async (task) => {
     try {
       const nextStatus = task.status === 'Completed' ? 'Pending' : 'Completed';
-      await taskAPI.updateTask(task._id, { status: nextStatus });
+      const updated = await taskAPI.updateTask(task._id, { status: nextStatus });
+      setTasks((prev) => {
+        const next = prev.map((t) => (t._id === updated._id ? updated : t));
+        setStats(computeStats(next));
+        return next;
+      });
+      setLiveNotifications((prev) => [
+        {
+          id: `${updated._id}-toggle-${Date.now()}`,
+          type: 'updated',
+          title: updated.status === 'Completed' ? 'Assignment Completed 🎉' : 'Assignment Reopened',
+          message: `"${updated.title}" status changed to ${updated.status}.`,
+          timestamp: new Date().toISOString(),
+        },
+        ...prev.slice(0, 19),
+      ]);
+      fetchData();
     } catch (err) {
       console.error('Error toggling task status:', err);
       alert('Failed to update task status');
@@ -253,7 +276,26 @@ const Dashboard = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this assignment?')) {
       try {
+        const deleted = tasks.find((t) => t._id === id);
         await taskAPI.deleteTask(id);
+        setTasks((prev) => {
+          const next = prev.filter((t) => t._id !== id);
+          setStats(computeStats(next));
+          return next;
+        });
+        if (deleted) {
+          setLiveNotifications((prev) => [
+            {
+              id: `${id}-deleted-${Date.now()}`,
+              type: 'deleted',
+              title: 'Assignment Removed',
+              message: `"${deleted.title}" was removed from your planner.`,
+              timestamp: new Date().toISOString(),
+            },
+            ...prev.slice(0, 19),
+          ]);
+        }
+        fetchData();
       } catch (err) {
         console.error('Error deleting task:', err);
         alert('Failed to delete assignment');
