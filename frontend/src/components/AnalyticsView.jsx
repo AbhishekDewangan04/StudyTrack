@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { analyticsAPI } from '../services/api';
-import { BarChart2, PieChart, TrendingUp, Award, Zap, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
-import { SkeletonCard } from './ui/Skeleton';
+import { BarChart2, PieChart, TrendingUp, AlertCircle, RefreshCw } from 'lucide-react';
 
 const AnalyticsView = () => {
   const [period, setPeriod] = useState('7 Days');
@@ -192,9 +191,9 @@ const AnalyticsView = () => {
       {/* Main Analytics Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Task Completion Trend Panel (2 cols) */}
-        <div className="lg:col-span-2 bg-[#191B2B] border border-[#191B2B] p-6 rounded-2xl shadow-xl flex flex-col justify-between min-h-[380px]">
-          {/* Panel Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+        <div className="lg:col-span-2 bg-[#191B2B] border border-[#191B2B] p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col">
+          {/* Panel Header: Title, Subtitle directly below, and Legend */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2">
             <div>
               <h3 className="text-sm sm:text-base font-bold text-white tracking-tight font-display flex items-center gap-2">
                 <TrendingUp className="w-4.5 h-4.5 text-[#9B6BFF]" />
@@ -205,8 +204,8 @@ const AnalyticsView = () => {
               </p>
             </div>
 
-            {/* Legend & Hover Info */}
-            <div className="flex items-center space-x-4 text-xs font-medium">
+            {/* Legend */}
+            <div className="flex items-center space-x-4 text-xs font-medium self-start sm:self-center">
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-[#9B6BFF] shadow-sm shadow-[#9B6BFF]/50" />
                 <span className="text-slate-300">Completed</span>
@@ -218,31 +217,27 @@ const AnalyticsView = () => {
             </div>
           </div>
 
-          {/* Active Tooltip / Hover Banner */}
-          <div className="h-7 mb-2 px-3 py-1 bg-[#111522] rounded-xl border border-[#191B2B] flex items-center justify-between text-xs text-slate-300">
+          {/* Compact Caption & Active Tooltip Strip directly above plot */}
+          <div className="flex items-center justify-between text-[11px] text-slate-400 py-1.5 border-b border-[#111522] mb-3 min-h-[26px]">
             {hoveredData ? (
-              <>
-                <span className="font-bold text-white">{hoveredData.date || hoveredData.day}</span>
-                <div className="flex items-center space-x-3 text-[11px] font-semibold">
-                  <span className="text-[#C4A7FF]">
-                    {hoveredData.completed} completed
-                  </span>
-                  <span className="text-[#FFBF69]">
-                    {hoveredData.created} created
-                  </span>
-                </div>
-              </>
+              <div className="flex items-center space-x-2 text-xs">
+                <span className="font-bold text-white">{hoveredData.date || hoveredData.day}:</span>
+                <span className="text-[#C4A7FF] font-semibold">{hoveredData.completed} completed</span>
+                <span className="text-slate-600">•</span>
+                <span className="text-[#FFBF69] font-semibold">{hoveredData.created} created</span>
+              </div>
             ) : (
-              <span className="text-[11px] text-slate-500 italic">
-                Hover over bars to inspect daily counts
-              </span>
+              <span className="text-slate-500 italic">Hover over bars to inspect daily counts</span>
             )}
+            <span className="text-[10px] text-slate-500 font-medium hidden sm:inline">
+              Scale: 0–{maxVal}
+            </span>
           </div>
 
           {/* Chart Canvas Area */}
           {totalTasksCount === 0 && !hasAnyActivity ? (
             /* Graceful Empty State for accounts with zero tasks */
-            <div className="h-64 flex flex-col items-center justify-center border border-dashed border-[#1e2238] rounded-xl bg-[#111522]/50 p-6 text-center space-y-2">
+            <div className="h-[250px] sm:h-[320px] flex flex-col items-center justify-center border border-dashed border-[#1e2238] rounded-xl bg-[#111522]/40 p-6 text-center space-y-2">
               <BarChart2 className="w-10 h-10 text-[#9B6BFF]/40" />
               <p className="text-xs font-bold text-white">No tasks created yet</p>
               <p className="text-[11px] text-slate-400 max-w-sm">
@@ -251,7 +246,7 @@ const AnalyticsView = () => {
             </div>
           ) : rawTrendItems.length > 0 ? (
             /* Render Trend Chart with Visible Y-Axis, Gridlines, and Bars */
-            <div className="relative h-64 flex flex-col justify-between pt-2">
+            <div className="relative h-[250px] sm:h-[320px] w-full flex flex-col justify-end pt-2 pb-1">
               {/* Background Horizontal Gridlines with Y-Axis Labels */}
               <div className="absolute inset-0 flex flex-col justify-between pointer-events-none pb-7 pl-8">
                 {yTicks.map((val, idx) => (
@@ -265,7 +260,7 @@ const AnalyticsView = () => {
               </div>
 
               {/* Foreground Bars Container */}
-              <div className="relative z-10 flex items-end justify-between pl-8 h-[calc(100%-28px)]">
+              <div className="relative z-10 flex items-end justify-between pl-8 h-[calc(100%-26px)]">
                 {rawTrendItems.map((item, idx) => {
                   const compHeight = item.completed > 0 ? Math.max((item.completed / maxVal) * 100, 8) : 0;
                   const createHeight = item.created > 0 ? Math.max((item.created / maxVal) * 100, 8) : 0;
@@ -276,12 +271,22 @@ const AnalyticsView = () => {
                       key={idx}
                       onMouseEnter={() => setHoveredIndex(idx)}
                       onMouseLeave={() => setHoveredIndex(null)}
-                      className={`flex-1 flex flex-col items-center justify-end h-full px-0.5 sm:px-1 rounded-xl transition cursor-pointer ${
+                      className={`flex-1 flex flex-col items-center justify-end h-full px-0.5 sm:px-1 rounded-xl transition cursor-pointer relative ${
                         isHovered ? 'bg-[#9B6BFF]/10' : ''
                       }`}
                     >
+                      {/* Floating Tooltip Bubble on Hover */}
+                      {isHovered && (
+                        <div className="absolute -top-9 z-30 pointer-events-none bg-[#090B12] text-white px-2 py-1 rounded-lg border border-[#9B6BFF]/40 shadow-xl text-[10px] whitespace-nowrap flex items-center space-x-1.5 animate-fade-in">
+                          <span className="font-bold">{item.day}:</span>
+                          <span className="text-[#C4A7FF]">{item.completed} comp</span>
+                          <span className="text-slate-600">/</span>
+                          <span className="text-[#FFBF69]">{item.created} crt</span>
+                        </div>
+                      )}
+
                       {/* Dual Bar Column */}
-                      <div className="w-full max-w-[42px] flex items-end justify-center space-x-1 h-full pb-1">
+                      <div className="w-full max-w-[42px] flex items-end justify-center space-x-1 h-full pb-0.5">
                         {/* Completed Bar (Electric Violet) */}
                         <div
                           style={{ height: `${compHeight}%` }}
@@ -307,7 +312,7 @@ const AnalyticsView = () => {
               </div>
 
               {/* X-Axis Labels Row */}
-              <div className="flex items-center justify-between pl-8 pt-2 border-t border-[#191B2B]">
+              <div className="flex items-center justify-between pl-8 pt-1.5 border-t border-[#191B2B]">
                 {rawTrendItems.map((item, idx) => {
                   const isHovered = hoveredIndex === idx;
                   // If lots of items (e.g. 30 days), only show spaced labels
@@ -333,7 +338,7 @@ const AnalyticsView = () => {
               </div>
             </div>
           ) : (
-            <div className="h-64 flex flex-col items-center justify-center border border-dashed border-[#1e2238] rounded-xl bg-[#111522] p-6 text-center space-y-1">
+            <div className="h-[250px] sm:h-[320px] flex flex-col items-center justify-center border border-dashed border-[#1e2238] rounded-xl bg-[#111522] p-6 text-center space-y-1">
               <BarChart2 className="w-8 h-8 text-slate-500" />
               <p className="text-xs font-bold text-white">No trend data available for this timeframe</p>
               <p className="text-[11px] text-slate-400">Try selecting another period.</p>
@@ -342,7 +347,7 @@ const AnalyticsView = () => {
         </div>
 
         {/* Subject Distribution Panel (1 col) */}
-        <div className="bg-[#191B2B] border border-[#191B2B] p-6 rounded-2xl shadow-xl flex flex-col justify-between min-h-[380px]">
+        <div className="bg-[#191B2B] border border-[#191B2B] p-5 sm:p-6 rounded-2xl shadow-xl flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm sm:text-base font-bold text-white tracking-tight font-display flex items-center gap-2">
