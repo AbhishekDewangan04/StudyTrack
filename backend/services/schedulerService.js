@@ -151,8 +151,12 @@ const { isTestEnvironment } = require('../utils/testContext');
 
 // Initialize background scheduler
 const initScheduler = () => {
-  if (isTestEnvironment()) {
-    console.log('⏰ [Scheduler] Background Email Scheduler Service disabled in test environment');
+  if (isTestEnvironment() || process.env.VERCEL) {
+    if (process.env.VERCEL) {
+      console.log('⏰ [Scheduler] Background Email Scheduler Service disabled in serverless environment');
+    } else {
+      console.log('⏰ [Scheduler] Background Email Scheduler Service disabled in test environment');
+    }
     return;
   }
   console.log('⏰ [Scheduler] Background Email Scheduler Service Initialized (Interval: 15 mins)');

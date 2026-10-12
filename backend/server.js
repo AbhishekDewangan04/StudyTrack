@@ -9,9 +9,15 @@ console.log('🤖 Gemini API Key present:', Boolean(process.env.GEMINI_API_KEY &
 const express = require('express');
 const http = require('http');
 const cors = require('cors');
+const mongoose = require('mongoose');
 const connectDB = require('./config/db');
+const { getDBDiagnostics, getMongoUriMetadata } = connectDB;
 const { initSocket } = require('./config/socket');
 const { initScheduler } = require('./services/schedulerService');
+
+// Safe runtime verification for MongoDB URI (never exposes credentials or hosts)
+const mongoMeta = getMongoUriMetadata();
+console.log(`📦 MongoDB URI configured: ${mongoMeta.configured} (protocol: ${mongoMeta.protocol})`);
 
 // Connect to MongoDB database
 connectDB();
@@ -31,6 +37,22 @@ const { testContextStorage } = require('./utils/testContext');
 app.use(cors());
 app.use(express.json());
 
+// Database connection assurance middleware for serverless invocations
+app.use(async (req, res, next) => {
+  // Keep root and basic health checks lightweight without blocking on DB
+  if (req.path === '/' || req.path === '/api/health') {
+    return next();
+  }
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDB();
+    } catch (err) {
+      // Downstream route controllers enforce DB readiness
+    }
+  }
+  next();
+});
+
 // Request-scoped test environment isolation middleware
 app.use((req, res, next) => {
   const isTest =
@@ -45,11 +67,19 @@ app.use((req, res, next) => {
 });
 
 // Basic Health Check Endpoint
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  if (mongoose.connection.readyState !== 1) {
+    try {
+      await connectDB();
+    } catch (err) {
+      // Safe diagnostics will reflect error state
+    }
+  }
   res.status(200).json({
     status: 'OK',
     message: 'StudyTrack Backend API & WebSockets are up and running!',
     timestamp: new Date().toISOString(),
+    database: getDBDiagnostics(),
   });
 });
 
@@ -77,8 +107,13 @@ app.get('/', (req, res) => {
   res.send('StudyTrack API & WebSocket Server is live. Access GET /api/health for system status.');
 });
 
-// Start listening on configured port
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`🚀 StudyTrack Server & Socket.IO running on http://localhost:${PORT}`);
-});
+// Export Express app for Vercel Serverless Functions
+module.exports = app;
+
+// Start listening on configured port when run directly (standalone server)
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => {
+    console.log(`🚀 StudyTrack Server & Socket.IO running on http://localhost:${PORT}`);
+  });
+}

@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
 const User = require('../models/User');
+const connectDB = require('../config/db');
 const { sendWelcomeEmail, sendPasswordResetEmail } = require('../services/emailService');
 
 // Helper function to generate a signed JWT token
@@ -20,6 +21,19 @@ const registerUser = async (req, res) => {
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Please fill in all fields' });
+    }
+
+    // Ensure database connection is established in serverless environments
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectDB();
+      } catch (dbErr) {
+        // Will be caught by readiness check below
+      }
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database service unavailable. Please check server database connection.' });
     }
 
     // Check if user already exists
@@ -68,6 +82,15 @@ const loginUser = async (req, res) => {
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Please provide email and password' });
+    }
+
+    // Ensure database connection is established in serverless environments
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectDB();
+      } catch (dbErr) {
+        // Will be caught by readiness check below
+      }
     }
 
     if (mongoose.connection.readyState !== 1) {
@@ -120,6 +143,19 @@ const forgotPassword = async (req, res) => {
 
     if (!email) {
       return res.status(400).json({ message: 'Please provide an email address' });
+    }
+
+    // Ensure database connection is established in serverless environments
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectDB();
+      } catch (dbErr) {
+        // Handled below
+      }
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database service unavailable. Please check server database connection.' });
     }
 
     const user = await User.findOne({ email });
@@ -178,6 +214,19 @@ const resetPassword = async (req, res) => {
 
     if (!password || password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+
+    // Ensure database connection is established in serverless environments
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectDB();
+      } catch (dbErr) {
+        // Handled below
+      }
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ message: 'Database service unavailable. Please check server database connection.' });
     }
 
     // Hash the URL reset token to match against database
@@ -458,6 +507,19 @@ const googleOAuthCallback = async (req, res) => {
     }
 
     const userEmail = googleProfile.email.toLowerCase().trim();
+
+    // Ensure database connection is established in serverless environments
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await connectDB();
+      } catch (dbErr) {
+        // Handled below
+      }
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+      return res.redirect(`${clientUrl}/?auth_error=${encodeURIComponent('Database service unavailable. Please check server database connection.')}`);
+    }
 
     // Find existing user by verified Google email
     let user = await User.findOne({ email: userEmail });
